@@ -56,26 +56,26 @@ calculate_green_space: cálcula m2 de espacios verdes en un rango de distancia y
 ```python
 from pyomu import pyomu
 
-censo = calculate_nse(censo, 
-                          X, 
-                          population='cant_pers', 
-                          show_map=False)
+censo = pyomu.calculate_nse(censo, 
+                            X, 
+                            population='cant_pers', 
+                            show_map=False)
     
-hexs = create_h3(censo, 
-                 res=8, 
-                 show_map=False)
+hexs = pyomu.create_h3(censo, 
+                       res=8, 
+                       show_map=False)
 
-hexs = distribute_population(gdf=censo, 
-                             id_gdf='RADIO_LINK', 
-                             hexs=hexs, 
-                             id_hexs='hex', 
-                             population='cant_pers', 
-                             pca='PCA_1', 
-                             crs=city_crs, 
-                             q=[5, 3],
-                             order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
-                                          ['Alto', 'Medio', 'Bajo']],
-                             show_map=True)
+hexs = pyomu.distribute_population(gdf=censo, 
+                                   id_gdf='RADIO_LINK', 
+                                   hexs=hexs, 
+                                   id_hexs='hex', 
+                                   population='cant_pers', 
+                                   pca='PCA_1', 
+                                   crs=city_crs, 
+                                   q=[5, 3],
+                                   order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
+                                                ['Alto', 'Medio', 'Bajo']],
+                                   show_map=True)
 
 ```
 censo es un DataFrame con la cartografía y variables censales.
