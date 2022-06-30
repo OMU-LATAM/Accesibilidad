@@ -14,7 +14,7 @@ pip install pyomu
 from pyomu install pyomu
 ```
 
-## Example:
+## Notebook example:
 ```sh
 https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb
 ```
