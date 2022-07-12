@@ -18,7 +18,6 @@ from pyomu install pyomu
 
 <https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb>
 
-
 # Antecedentes
 
 En el marco de la actualización del Observatorio de Movilidad Urbana (https://omu-latam.org/), se está trabajando en torno a métricas de acceso universal tomando provecho de los avances tecnológicos en el análisis de datos. Esta librería presenta las herramientas utilizadas en el modelo análitico utilizado para analizar la accesibilidad urbana en ciudades de América Latina. Se busca que este modelo sea aplicable a diferentes contextos y replicable por personas con conocimientos técnicos en datos y programación. Los indicadores y mapas resultantes podrán ser una herramienta útil para identificar brechas de acceso en una ciudad y diseñar las correspondientes intervenciones.
@@ -91,4 +90,17 @@ hexs = distribute_population(gdf=censo,
 censo es un DataFrame con la cartografía y variables censales.
 X contiene las variables que serán utilizadas para calcular el Nivel Socioeconómico
 
+# Resultados
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/tiempos_prom.png "tiempos promedio")
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/veloc_prom.png "velocidad promedio")
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/distancias.jpg "Distancias")
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/tiempos.jpg "Tiempos")
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/centro.jpg "Tiempos al centro")
+
+![alt text](https://github.com/OMU-LATAM/Accesibilidad/blob/main/img/centro_dist.jpg "Distancias al centro")
 
