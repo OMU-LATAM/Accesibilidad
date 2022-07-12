@@ -15,9 +15,9 @@ from pyomu install pyomu
 ```
 
 ## Notebook example:
-```sh
-[Example Cordoba](https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb)
-```
+
+<https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb>
+
 
 # Antecedentes
 
