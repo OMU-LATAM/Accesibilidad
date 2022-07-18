@@ -56,167 +56,32 @@ from pptx.dml.color import RGBColor # ColorFormat,
 from PIL import Image, ImageDraw
 
 import os
-from PIL import Image # pip install Pillow
 import glob
+
+import matplotlib as mpl
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.pyplot as plt
+import matplotlib.ticker as tick
+import IPython
+from IPython.display import set_matplotlib_formats
+
+
+from PIL import Image # pip install Pillow
 from PIL import ImageOps
 
-def geometry_to_h3(geometry, res=8):        
-    '''
-    Devuelve el hexágono h3 que contiene el punto (lat, lng) para una resolución dada. Llama a la función geo_to_h3 de la librería h3.
-    
-    Parámetros:    
-    lat = latitud
-    lng = longitud
-    res = resolución esperada del hexágono h3
-    
-    Salida: Código H3 del hexágono al que pertenece la geometria
-    '''
-    return h3.geo_to_h3(lat=geometry.y, lng=geometry.x, resolution=res)
+import seaborn as sns
+from pandas import DataFrame
 
-def h3_from_row(row, res, x, y):
-    '''
-    Toma una fila, un nivel de resolucion de h3 y los nombres que contienen las coordenadas xy y devuelve un id de indice h3
-    
-    Parámetros:
-    row = Fila de un GeoDataFrame
-    res = resolución h3
-    x = coordenada x
-    y = coordenada y
-    
-    Salida: Código H3 del hexágono al que pertenece la geometria
-    '''
-        
-    ret = np.nan
-    
-    if (row[y] != np.nan)  & (row[x] != np.nan):
-        ret = h3.geo_to_h3(row[y], row[x], resolution=res)
-    
-    return ret
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
-def h3_indexing(df, res, lat='lat', lon='lon', var=None):
-    """
-    Esta funcion toma una tabla con dos pares de coordenadas para origen y destino. 
-    Según n nivel de resolucion h3, devuelve la tabla con los ids de h3
-    
-    Parámetros:
-    df = GeoDataFrame
-    res = Resolución h3
-    lat= campo latitud
-    lon= campo longitud
-    var= nombre de la variable salida (por defecto el nombre de variable es f'h3_res_{res}')
-    
-    Salida: GeoDataFrame con nuevo campo (con el nombre de la variable var)
-    
-    """
-    
-    if len(var)==0: var=f'h3_res_{res}' 
-    
-    df[var] = df.apply(h3_from_row, axis=1, args=[res, lon, lat])
-    
-    return df
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def add_geometry(row, bring='polygon'):
 
-    '''
-    Devuelve una tupla de pares lat/lng que describen el polígono de la celda. Llama a la función h3_to_geo_boundary de la librería h3.
-    
-    Parámetros:     
-    row = código del hexágono en formato h3    
-    bring = define si devuelve un polígono, latitud o longitud
-    
-    Salida: geometry resultado
-    '''
-    points = h3.h3_to_geo_boundary(row, True)
-    
-    points = Polygon(points)
-    if bring == 'lat':
-        points = points.representative_point().y
-    if bring == 'lon':
-        points = points.representative_point().x
-    
-    return points
-
-def bring_children_(x, res=8):    
-    '''
-    Trae los hijos de un hexágono h3
-    
-    Parámetros:
-    x = código del hexágono en formato h3
-    res = resolución de los hexágonos hijos
-    
-    Salida: lista con los códigos h3 solicitados
-    '''
-    return list(h3.h3_to_children(x, res))
-
-def bring_children(gdf, res=8):    
-    '''
-    Dado un GeoDataFrame de hexágonos h3, la función devuelve un GeoDataFrame con los hexágonos hijos.
-    
-    Parámetros:
-    gdf = GeoDataFrame de hexágonos h3 en una determinada resolución
-    res = Resolución del nuevo GeoDataFrame con los hexágonos en resolución mayor. La resolución tiene que ser mayor a la resolución del GeoDataframe original.    
-    
-    Salida: nuevo GeoDataFrame con un registro por cada hexágono correpondiente a los h3 hijos.
-    '''
-    gdf_list = gdf.hex.apply(bring_children_, res=res)
-    gdf_new = []
-    for i in gdf_list.tolist(): gdf_new+=list(i)
-    gdf_new = pd.DataFrame(gdf_new, columns=['hex'])
-    gdf_new['geometry'] = gdf_new.hex.apply(add_geometry)
-    gdf_new = gpd.GeoDataFrame(gdf_new, crs='EPSG:4326')
-    return gdf_new
-
-def create_h3(gdf, res = 8, show_map=False):
-    '''
-    Crea un GeoDataFrame de hexágonos h3 en un determinada resolución a partir de una GeoDataFrame de polígonos o puntos.
-    
-    Parámetros:
-    gdf_ = GeoDataFrame de entrada
-    res = Resolución h3 que se quiere convertir.
-    show_map = (True/False) muestra mapa con el mapa original y el nuevo de hexágonos superpuestos
-    
-    Salida: Nuevo GeoDataFrame en formato de hexágonos H3 que cubre el mismo área geográfico que el GeoDataFrame de entrada.
-    '''
-    gdf_ = gdf.copy()
-    gdf_['geometry'] = gdf_['geometry'].representative_point()
-    gdf_['hex'] = gdf_.geometry.apply(geometry_to_h3, args=[res-3])
-    gdf_ = gdf_[['hex']].drop_duplicates().reset_index(drop=True)
-    gdf_['geometry'] = gdf_['hex'].apply(add_geometry)
-    gdf_ = gpd.GeoDataFrame(gdf_, crs='EPSG:4326')
-
-    gdf_ = bring_children(gdf_, res=res)
-    
-    gdf_ = gpd.sjoin(gdf_, gdf)[['hex', 'geometry']].drop_duplicates().reset_index(drop=True)
-    
-    if show_map:
-        fig, ax = plt.subplots(dpi=150, figsize=(6, 6))
-        censo.to_crs(3857).plot(ax=ax, alpha=.7, edgecolor='navy', color='None', lw=.1)
-        gdf_.to_crs(3857).plot(ax=ax, alpha=.7, edgecolor='red', color='None', lw=.1)
-        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=3)
-        ax.axis('off')
-    
-    return gdf_
-    
-def weighted_qcut(values, weights, q, **kwargs):
-    '''
-    Calculo terciles, deciles, terciles u otra corto teniendo en cuenta una variable de ponderación
-    Parámetros
-    values = lista de valores
-    weights = lista con la ponderación. 
-    q = Cantidad de grupos resultado
-    **kwargs = parámetros para la función pd.cut 
-    
-    Salida: lista con un resultado numérico correspondiente a la agrupación solicitada. Ej. Para quintiles devuelve valores [1,2,3,4,5]
-    
-    '''
-    
-    if is_integer(q):
-        quantiles = np.linspace(0, 1, q + 1)
-    else:
-        quantiles = q
-    order = weights.iloc[values.argsort()].cumsum()
-    bins = pd.cut(order / order.iloc[-1], quantiles, **kwargs)
-    return bins.sort_index()
+from pyomu.support_h3 import support_h3 as suph3
+from pyomu.support import support as sup
 
     
 def calculate_nse(df, vars, population, var_result='PCA_1', scaler_type='Standard', q=[5, 3], order_nse='', show_map=False):
@@ -277,7 +142,7 @@ def calculate_nse(df, vars, population, var_result='PCA_1', scaler_type='Standar
         
     for i in q:    
         
-        df_result[f'NSE_{i}'] = weighted_qcut(df_result[var_result[0]], df_result[population], i, labels=False)
+        df_result[f'NSE_{i}'] = sup.weighted_qcut(df_result[var_result[0]], df_result[population], i, labels=False)
         df_result[f'NSE_{i}'] = df_result[f'NSE_{i}'] + 1
     
 
@@ -291,8 +156,12 @@ def calculate_nse(df, vars, population, var_result='PCA_1', scaler_type='Standar
             
     
     if show_map:
+        
+        df_result['NSE_X'] = df_result[f'NSE_{i}'].replace({'1 - Alto':'Alto', '2 - Medio-Alto':'Medio-Alto', '3 - Medio':'Medio',  '4 - Medio-Bajo':'Medio-Bajo', '5 - Bajo':'Bajo'})
+        df_result['NSE_X'] = pd.CategoricalIndex(df_result['NSE_X'], categories= ['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'])
+        
         fig, ax = plt.subplots(dpi=150, figsize=(5, 5))
-        df_result.to_crs(3857).plot(column='NSE_5', 
+        df_result.to_crs(3857).plot(column='NSE_X', 
                                     ax=ax, 
                                     cmap='Reds',
                                     categorical=True,
@@ -301,33 +170,12 @@ def calculate_nse(df, vars, population, var_result='PCA_1', scaler_type='Standar
 
         ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=3)
         ax.axis('off');
+        del df_result['NSE_X']
     
     return df_result
     
-def bring_osm(gdf, tags = {'leisure':True, 'aeroway':True, 'natural':True}, list_types = '' ):
-    '''
-    Trae elementos de Open Street Maps usando la librería osmnx
     
-    Parámetros:
-    gdf = Capa de referencia para delimitar el área de elementos a traer
-    tags = Elementos del mapa a traer. Una lista completa de elementos en Open Street Maps se puede consultar en: https://wiki.openstreetmap.org/wiki/Map_features
-    list_types: Se descargan puntos, líneas, polígonos y multipolígonos. list_types define el tipo de elementos a traer.
-    
-    Salida: GeoDataFrame con objetos espaciales de Open Street Maps
-    '''
 
-    xmin,ymin,xmax,ymax = gdf.total_bounds
-    osm = ox.geometries_from_bbox(ymax,ymin,xmax, xmin, tags).reset_index()
-
-    for i in tags:    
-        osm.loc[osm[i].notna(), 'tag'] = i
-        osm.loc[osm[i].notna(), 'tag_type'] = osm.loc[osm[i].notna(), i]
-
-    osm = osm[['osmid', 'tag', 'tag_type', 'name', 'geometry']]
-    if len(list_types) > 0:
-        osm = osm.loc[(osm.geometry.type.isin(list_types)), :] 
-
-    return osm
 
 def distribute_population(gdf, 
                           id_gdf, 
@@ -418,7 +266,7 @@ def distribute_population(gdf,
         q = [q]
         
     for i in q:            
-        df_result[f'NSE_{i}'] = weighted_qcut(df_result[pca], df_result[population], i, labels=False)
+        df_result[f'NSE_{i}'] = sup.weighted_qcut(df_result[pca], df_result[population], i, labels=False)
         df_result[f'NSE_{i}'] = df_result[f'NSE_{i}'] + 1
     
     
@@ -431,6 +279,7 @@ def distribute_population(gdf,
     
     if show_map:
         
+        
         i = q[0]
         
         fig = plt.figure(figsize=(15,15), dpi=100)
@@ -438,26 +287,8 @@ def distribute_population(gdf,
         sns.set_style("white")
         
         fig.suptitle('NSE', fontsize=16)
-
+        
         ax = fig.add_subplot(2,2,1)
-        
-        df_result.to_crs(3857).plot(column=f'NSE_{i}', 
-                                    ax=ax, 
-                                    cmap='Reds',
-                                    categorical=True,
-                                    legend=True,                            
-                                    legend_kwds={'loc': 'best', 
-                                                 'frameon': True, 
-                                                 'edgecolor':'white', 
-                                                 'facecolor':None, 
-                                                 'title':'NSE', 
-                                                 'title_fontsize':8, 
-                                                 'fontsize':7})
-        
-        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=3)
-        ax.axis('off');
-        
-        ax = fig.add_subplot(2,2,2)
         
         gdf.to_crs(3857).plot(column=f'NSE_{i}', 
                                     ax=ax, 
@@ -472,14 +303,39 @@ def distribute_population(gdf,
                                                  'title_fontsize':8, 
                                                  'fontsize':7})
         
-        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron)
+        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=5)
+        
         ax.axis('off');
+
+        ax = fig.add_subplot(2,2,2)
+        
+        
+        df_result['NSE_X'] = df_result[f'NSE_{i}'].replace({'1 - Alto':'Alto', '2 - Medio-Alto':'Medio-Alto', '3 - Medio':'Medio',  '4 - Medio-Bajo':'Medio-Bajo', '5 - Bajo':'Bajo'})
+        df_result['NSE_X'] = pd.CategoricalIndex(df_result['NSE_X'], categories= ['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'])
+                
+        df_result.to_crs(3857).plot(column=f'NSE_X', 
+                                    ax=ax, 
+                                    cmap='Reds',
+                                    categorical=True,
+                                    legend=True,                            
+                                    legend_kwds={'loc': 'best', 
+                                                 'frameon': True, 
+                                                 'edgecolor':'white', 
+                                                 'facecolor':None, 
+                                                 'title':'NSE', 
+                                                 'title_fontsize':8, 
+                                                 'fontsize':7})
+        
+        ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=5)
+        
+        ax.axis('off');
+        del df_result['NSE_X']
+        
     
     return df_result
 
 
-def normalize_words(x):
-    return unidecode.unidecode(x).lower()
+
 
 def assign_weights(amenities):
     '''
@@ -582,7 +438,7 @@ def assign_weights(amenities):
                                    tags_], ignore_index=True)
         n += 1
 
-    amenities['tag_type'] = amenities.tag_type.apply(normalize_words)
+    amenities['tag_type'] = amenities.tag_type.apply(sup.normalize_words)
 
     for i in tags_weighted.sort_values('weight', ascending=True).itertuples():   
         
@@ -593,6 +449,7 @@ def assign_weights(amenities):
     amenities = amenities[amenities.weight > 0].reset_index(drop=True)
 
     return amenities.sort_values('tag_type').reset_index(drop=True)
+
 
 def activity_density(amenities, city_crs, cantidad_clusters = 15, show_map = False): 
     '''
@@ -706,50 +563,10 @@ def activity_density(amenities, city_crs, cantidad_clusters = 15, show_map = Fal
 
     return result[['cluster', 'weight', 'weight%', 'geometry']], scores, amenities
     
-def create_latlon(df, normalize=False, res=8, hex='hex', lat='', lon='', var_latlon=''):
-    
-    delete_latlon = False
-    
-    if (len(lat)==0)|(len(lon)==0):
-        delete_latlon = True
-        lat = 'lat'
-        lon = 'lon'
-    
-    cols = df.columns.tolist()
-    new_cols = []
+
 
     
-    df[lat] = df.representative_point().y.round(5)
-    df[lon] = df.representative_point().x.round(5)
     
-    df[hex] = df.apply(h3_from_row, axis=1, args=[res, lon, lat])
-    
-    new_cols += [hex, lat, lon]
-
-    if normalize:    
-        df[f'{lat}_norm'] = df[hex].apply(add_geometry, bring='lat').round(5)
-        df[f'{lon}_norm'] = df[hex].apply(add_geometry, bring='lon').round(5)
-        new_cols += [f'{lat}_norm', f'{lon}_norm']
-
-    if len(var_latlon)>0:
-        df[var_latlon] = df[lat].astype(str) + ', ' + df[lon].astype(str)
-        new_cols += [var_latlon]
-        if normalize:
-            df[f'{var_latlon}_norm'] = df[f'{lat}_norm'].astype(str) + ', ' + df[f'{lon}_norm'].astype(str)
-            new_cols += [f'{var_latlon}_norm']
-
-    for i in new_cols:        
-        if i not in cols:
-            cols = cols + [i]
-
-    df = df[cols]
-    
-    if delete_latlon:
-        df = df.drop([lat, lon], axis=1)
-        if normalize:
-            df = df.drop([f'{lat}_norm', f'{lon}_norm'], axis=1)
-
-    return df
     
 def create_matrix(origin,                   
                   destination, 
@@ -784,8 +601,8 @@ def create_matrix(origin,
     
     lat_o, lon_o, lat_d, lon_d = 'lat_o', 'lon_o', 'lat_d', 'lon_d'
     
-    origin = create_latlon(df = origin, normalize=True, res=res, hex='hex_o', var_latlon='origin', lat=lat_o, lon=lon_o).drop(['geometry'], axis=1)
-    destination = create_latlon(df = destination, normalize=True, res=res, hex='hex_d', var_latlon='destination', lat=lat_d, lon=lon_d).drop(['geometry'], axis=1)
+    origin = suph3.create_latlon(df = origin, normalize=True, res=res, hex='hex_o', var_latlon='origin', lat=lat_o, lon=lon_o).drop(['geometry'], axis=1)
+    destination = suph3.create_latlon(df = destination, normalize=True, res=res, hex='hex_d', var_latlon='destination', lat=lat_d, lon=lon_d).drop(['geometry'], axis=1)
     
     cols_latlon_o, cols_latlon_d = [], []
     if latlon:        
@@ -909,10 +726,8 @@ def measure_distances_osm(origin,
     if driving: add_file+='_drive'
     if walking: add_file+='_walk'
     if normalize: add_file+='_norm'
-
-    tmp = Path(current_path / 'tmp')
-    if not Path(tmp).is_dir(): Path.mkdir(tmp)  
-    trips_file = tmp / f'{trips_file}_osm{add_file}.csv'
+    
+    create_result_dir(current_path=current_path)
     
     modes = []
     if driving:
@@ -1068,30 +883,36 @@ def measure_distances_osm(origin,
     
     print('Proceso finalizado')
     return od_matrix
-    
-    
-def correct_datetime(trip_datetime, lat, lon):        
+
+def bring_osm(gdf, tags = {'leisure':True, 'aeroway':True, 'natural':True}, list_types = '' ):
     '''
-    Corrige la diferencia horaria para la consulta en Google Maps teniendo en cuenta la zona de consulta y la zona donde se está corriendo el proceso
+    Trae elementos de Open Street Maps usando la librería osmnx
     
-    Parámetros
-    trip_datetime = datetime en el que se quiere correr el proceso
-    lat = latitud donde se va a correr el proceso
-    lon =  longitud donde se va a correr el proceso
+    Parámetros:
+    gdf = Capa de referencia para delimitar el área de elementos a traer
+    tags = Elementos del mapa a traer. Una lista completa de elementos en Open Street Maps se puede consultar en: https://wiki.openstreetmap.org/wiki/Map_features
+    list_types: Se descargan puntos, líneas, polígonos y multipolígonos. list_types define el tipo de elementos a traer.
     
-    Salida: devuelve una variable datatime corregida para correr el proceso según la diferencia horaria
+    Salida: GeoDataFrame con objetos espaciales de Open Street Maps
     '''
-    try:
-        tz = tzwhere.tzwhere()
-        timeZoneStr = tz.tzNameAt(lat, lon)
-        timeZoneObj = timezone(timeZoneStr)
-        now_time = datetime.datetime.now(timeZoneObj)
-        now_time = now_time.time().hour    
-        hour_dif = now_time - datetime.datetime.now().time().hour     
-        hour_dif = trip_datetime + timedelta(hours=(hour_dif*-1))
-    except:
-        hour_dif = trip_datetime
-    return hour_dif
+
+    xmin,ymin,xmax,ymax = gdf.total_bounds
+    osm = ox.geometries_from_bbox(ymax,ymin,xmax, xmin, tags).reset_index()
+
+    for i in tags:    
+        osm.loc[osm[i].notna(), 'tag'] = i
+        osm.loc[osm[i].notna(), 'tag_type'] = osm.loc[osm[i].notna(), i]
+
+    osm = osm[['osmid', 'tag', 'tag_type', 'name', 'geometry']]
+    if len(list_types) > 0:
+        osm = osm.loc[(osm.geometry.type.isin(list_types)), :] 
+
+    return osm
+    
+    
+
+    
+    
     
 def trip_info_googlemaps(coord_origin, 
                          coord_destin, 
@@ -1477,7 +1298,7 @@ def gmaps_matrix(od_matrix, geo_origin, geo_destination, trip_datetime, mode, gm
     Salida: Matriz de origenes y destinos con los resultados de la consulta a Google Maps
     '''
 
-    trip_datetime_corrected = correct_datetime(trip_datetime, lat=float(od_matrix[geo_origin].head(1).values[0].split(',')[0]), lon=float(od_matrix[geo_origin].head(1).values[0].split(',')[1]))
+    trip_datetime_corrected = sup.correct_datetime(trip_datetime, lat=float(od_matrix[geo_origin].head(1).values[0].split(',')[0]), lon=float(od_matrix[geo_origin].head(1).values[0].split(',')[1]))
     
     list_origin = od_matrix[geo_origin].unique().tolist()
     list_destination = od_matrix[geo_destination].unique().tolist()
@@ -1536,6 +1357,7 @@ def gmaps_matrix(od_matrix, geo_origin, geo_destination, trip_datetime, mode, gm
     
     return trips 
     
+    
 def save_key(key, Qty, current_path=Path(), key_file = 'save_key.csv'):
     '''
     Guarda cantidad de consultas en Google Maps en un archivo auxiliar    
@@ -1576,6 +1398,8 @@ def save_key(key, Qty, current_path=Path(), key_file = 'save_key.csv'):
     save_key.loc[(save_key.key==new_key)&(save_key.month==str(date.today())[:7]), 'X'] = 'X'
     
     return save_key
+    
+    
     
 def trip_info_googlemaps_matrix(od_matrix, 
                                 geo_origin,
@@ -1652,6 +1476,7 @@ def trip_info_googlemaps_matrix(od_matrix,
 
 
 
+
 def trips_gmaps_process(od_matrix, 
                         geo_origin,
                         geo_destination,
@@ -1688,8 +1513,7 @@ def trips_gmaps_process(od_matrix,
 #     current_path=current_path
 #     trips_file = 'trips_file_tmp'
 
-    tmp = current_path / 'tmp'
-    if not Path(tmp).is_dir(): Path.mkdir(tmp)        
+    create_result_dir(current_path=current_path)    
     
     modos = ''
     answer = ''
@@ -1737,7 +1561,7 @@ def trips_gmaps_process(od_matrix,
     
     trips_all = pd.DataFrame([])
     for trip_datetime in list_trip_datetime:
-        trips_file_ = tmp / Path(f'{trips_file}_{str(trip_datetime)[:10]}.csv'.replace(':', '_').replace(' ', '_'))
+        trips_file_ = current_path / 'tmp' / Path(f'{trips_file}_{str(trip_datetime)[:10]}.csv'.replace(':', '_').replace(' ', '_'))
 
         if Path(trips_file_).is_file():             
             
@@ -1758,8 +1582,9 @@ def trips_gmaps_process(od_matrix,
                                                 geo_destination, 
                                                 'trip_datetime'])
 
-        od_matrix_agg = od_matrix_agg[(od_matrix_agg.gmaps.isna())&(od_matrix_agg[geo_origin]!=od_matrix_agg[geo_destination])]
         
+        od_matrix_agg = od_matrix_agg[(od_matrix_agg.gmaps.isna())&(od_matrix_agg[geo_origin]!=od_matrix_agg[geo_destination])]
+    
         del od_matrix_agg['gmaps']
         del trips_all['gmaps']
     else:
@@ -1858,8 +1683,8 @@ def trips_gmaps_process(od_matrix,
 
                         trip_datetime = pd.to_datetime(trip_datetime)
 
-                        trips_file_ = tmp / Path(f'{trips_file}_{str(trip_datetime)[:10]}.csv'.replace(':', '_').replace(' ', '_'))
-
+                        trips_file_ = current_path / 'tmp' / Path(f'{trips_file}_{str(trip_datetime)[:10]}.csv'.replace(':', '_').replace(' ', '_'))
+                        
                         if len(trips_all) > 0:                            
                             trips = trips_all[trips_all.trip_datetime.dt.date == trip_datetime.date()]
                         else:
@@ -1867,7 +1692,7 @@ def trips_gmaps_process(od_matrix,
                         
                         if not only_distance_duration:
 
-                            trip_datetime_corrected = correct_datetime(trip_datetime, lat=float(coord_origin.split(',')[0]), lon=float(coord_origin.split(',')[1]))
+                            trip_datetime_corrected = sup.correct_datetime(trip_datetime, lat=float(coord_origin.split(',')[0]), lon=float(coord_origin.split(',')[1]))
 
                             n = 0                
                             for _, i in od_matrix_agg[(od_matrix_agg.trip_datetime==trip_datetime)&(od_matrix_agg[geo_origin]!=od_matrix_agg[geo_destination])].iterrows():         
@@ -2012,25 +1837,6 @@ def trips_gmaps_from_od(origin,
     Salida: matriz de origenes y destinos con las variables de tiempo y distancias calculadas para los modos solicitados
 
     '''
-
-# if True:
-#     origin = origin_sample.copy()
-#     id_origin = id_origin
-#     destination = destination_sample.copy()
-#     id_destination = id_destination 
-#     trip_datetime = trip_datetime                
-#     key = key
-#     transit=False
-#     driving=True
-#     walking=False
-#     bicycling=False
-#     full_day=True
-#     only_distance_duration=True
-#     current_path=current_path
-#     trips_file = 'trips_file_tmp'
-#     normalize=True
-#     res=8
-
     
     if not normalize:
         lat_o, lon_o, lat_d, lon_d = 'lat_o', 'lon_o', 'lat_d', 'lon_d'
@@ -2125,7 +1931,6 @@ def trips_gmaps_from_od(origin,
     
     return od_matrix[cols]
     
-    
 def trips_gmaps_from_matrix(od_matrix, 
                             trip_datetime,                 
                             key, 
@@ -2164,10 +1969,10 @@ def trips_gmaps_from_matrix(od_matrix,
         geo_origin = geo_origin + '_norm'        
         geo_destination = geo_destination + '_norm'        
 
-        od_matrix['lat_o_norm'] = od_matrix['hex_o'].apply(add_geometry, bring='lat').round(5)
-        od_matrix['lon_o_norm'] = od_matrix['hex_o'].apply(add_geometry, bring='lon').round(5)
-        od_matrix['lat_d_norm'] = od_matrix['hex_d'].apply(add_geometry, bring='lat').round(5)
-        od_matrix['lon_d_norm'] = od_matrix['hex_d'].apply(add_geometry, bring='lon').round(5)
+        od_matrix['lat_o_norm'] = od_matrix['hex_o'].apply(suph3.add_geometry, bring='lat').round(5)
+        od_matrix['lon_o_norm'] = od_matrix['hex_o'].apply(suph3.add_geometry, bring='lon').round(5)
+        od_matrix['lat_d_norm'] = od_matrix['hex_d'].apply(suph3.add_geometry, bring='lat').round(5)
+        od_matrix['lon_d_norm'] = od_matrix['hex_d'].apply(suph3.add_geometry, bring='lon').round(5)
         od_matrix[geo_origin] = od_matrix[f'lat_o_norm'].round(5).astype(str) + ', ' + od_matrix[f'lon_o_norm'].round(5).astype(str)
         od_matrix[geo_destination] = od_matrix[f'lat_d_norm'].round(5).astype(str) + ', ' + od_matrix[f'lon_d_norm'].round(5).astype(str)
         od_matrix = od_matrix.drop(['lat_o_norm', 'lon_o_norm', 'lat_d_norm', 'lon_d_norm'], axis=1)
@@ -2199,140 +2004,6 @@ def trips_gmaps_from_matrix(od_matrix,
 
     return od_matrix
     
-
-def indicators_all_day(od_matrix_sample, current_path = Path()):
-    
-
-#     '''
-#     Calcula indicadores para una muestra de viajes en automovil que se calcula para el día completo. Puede incluir varios días en el mismo DataFrame (ej. día de semana, sábado y domingo)
-#     od_matrix_sample = DataFrame con la matriz resultado de los viajes en automovil para las distintas horas de o los días.
-#     current_path = Directorio de trabajo. Por defecto Path()
-#     Salida: DataFrame de indicadores calculares y se guardan los resultados del análisis de current_path\Resultados
-#     '''
-
-    
-    
-    
-    if len(od_matrix_sample[od_matrix_sample.driving_duration_in_traffic.notna()]) > 0:
-
-        files = current_path / 'Resultados' 
-
-        if not files.is_dir(): Path.mkdir(files)
-
-        weekDaysMapping = ("Lunes", 
-                           "Martes",
-                           "Miércoles", 
-                           "Jueves",
-                           "Viernes", 
-                           "Sábado",
-                           "Domingo")
-        monthsMapping = ("", 
-                         "enero", 
-                         "febrero", 
-                         "marzo", 
-                         "abril", 
-                         "mayo", 
-                         "junio", 
-                         "julio", 
-                         "agosto", 
-                         "septiembre", 
-                         "octubre", 
-                         "noviembre", 
-                         "diciembre")
-
-        od_matrix_sample['kmh'] = (od_matrix_sample['driving_distance'] / (od_matrix_sample['driving_duration_in_traffic'] / 60)).round(2)
-
-        trip_time = od_matrix_sample.groupby('trip_datetime', as_index=False).agg({'driving_duration_in_traffic':'mean', 'kmh': 'mean'})
-        trip_time['date'] = trip_time.trip_datetime.dt.date
-        trip_time['hour'] = trip_time['trip_datetime'].dt.hour.astype(str).str.zfill(2)
-
-        indicators_all = pd.DataFrame([])
-        for i in trip_time.date.unique():
-
-            trip_time_tmp = trip_time[trip_time.date == i]
-            _ = ''
-            for x in range(0, len(f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}')):
-                _ += '-'
-
-            indicadores = pd.DataFrame([[pd.to_datetime(i).date(), 
-                                      f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}',
-                                      trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].hour,              
-                                      round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].driving_duration_in_traffic, 2),
-                                      round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].kmh, 2),
-                                      trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].hour,
-                                      round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].driving_duration_in_traffic, 2),
-                                      round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].kmh, 2),    
-                                      round(trip_time_tmp.loc[trip_time_tmp.kmh.idxmax()].kmh / trip_time_tmp.loc[trip_time_tmp.kmh.idxmin()].kmh, 2),
-                                      round(trip_time_tmp.driving_duration_in_traffic.mean(), 2),
-                                      round(trip_time_tmp.kmh.mean(), 2)
-                                      ]], 
-
-                                     columns=['Date', 
-                                              'Detalle día',
-                                             'Hora Punta',                      
-                                             'Tiempo de viaje en hora punta (min)',
-                                             'Velocidad de viaje en hora punta (kmh)',
-                                             'Hora Valle', 
-                                             'Tiempo de viaje en hora valle (min)',
-                                             'Velocidad de viaje en hora valle (kmh)',
-                                             'Índice de congestión',
-                                             'Tiempo promedio de los viajes (min)', 
-                                             'Velocidad promedio de los viajes (kmh)', ])
-
-            indicators_all = pd.concat([indicadores, indicators_all], ignore_index=True)
-
-        display(indicators_all.set_index('Detalle día').T)
-
-        indicadores.to_csv(files / 'indicadores_dia_completo.csv', index=False)
-
-        with sns.axes_style('darkgrid', {"axes.facecolor": "#d4dadc", 'figure.facecolor': "#d4dadc"}):
-
-            # Tiempos promedios
-            fig, ax = plt.subplots(dpi=150, figsize=(6, 2))
-
-            for i in trip_time.date.unique():
-                var = f'{weekDaysMapping[i.weekday()]} {i.day}/{i.month}/{i.year}'
-                current_day = trip_time.loc[trip_time.date==i, ['hour', 'driving_duration_in_traffic']].reset_index(drop=True).rename(columns={'driving_duration_in_traffic':var})        
-                current_day.plot(ax=ax, legend=True, lw=.6)
-
-
-            ax.set_title(f'Tiempos promedio de viaje', fontsize=8)
-            ax.set_xlabel('Hora', fontsize=8)
-            ax.set_ylabel('Tiempo promedio\n(minutos)', fontsize=8)
-            ax.set_xticks(list(range(0, 24)))
-            ax.tick_params(labelsize=6);
-
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
-            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=6)
-
-            fig.savefig(files / 'tiempos_dia_completo', dpi=300)
-
-
-            # Velocidades promedio
-            fig, ax = plt.subplots(dpi=150, figsize=(6, 2))
-
-            for i in trip_time.date.unique():
-                var = f'{weekDaysMapping[i.weekday()]} {i.day}/{i.month}/{i.year}'
-                current_day = trip_time.loc[trip_time.date==i, ['hour', 'kmh']].reset_index(drop=True).rename(columns={'kmh':var})        
-                current_day.plot(ax=ax, legend=True, lw=.6)
-
-            ax.set_title(f'Velocidad promedio de viaje', fontsize=8)
-            ax.set_xlabel('Hora', fontsize=8)
-            ax.set_ylabel('Velocidad promedio\n(kmh)', fontsize=8)
-            ax.set_xticks(list(range(0, 24)))
-
-            ax.tick_params(labelsize=6);
-
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
-            ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=6)
-            fig.savefig(files / 'kmh_dia_completo', dpi=300)
-    else:
-        print('No hay datos para procesar indicadores')
-        indicators_all = pd.DataFrame([])
-    
-    return indicators_all
     
 def distances_to_equipments(origin,
                             destination, 
@@ -2348,7 +2019,7 @@ def distances_to_equipments(origin,
                             equipment_type = '',
                             normalize=True,
                             closest_distance=[800, 1500, 2000],
-                            current_path=Path()):
+                           current_path=Path()):
     '''
     Calcula las distancias entre una capa geográfica de origenes y un capa de destinos que corresponda a algún tipo de equipamiento (ej. escuelas, hospitales, etc)
     En una primera instancia se calcula una matriz de distancia en OpenStreetMaps desde el centroide de la capa de origen hacia el establecimiento (capa destino)
@@ -2376,17 +2047,17 @@ def distances_to_equipments(origin,
 
     print('Calcula distancias en Open Street Maps')
     od_matrix_osm = measure_distances_osm(origin = origin, 
-                                      id_origin = id_origin, 
-                                      destination = destination, 
-                                      id_destination = id_destination,           
-                                      driving=False,
-                                      walking=True,
-                                      processing=processing, 
-                                      equipement_bring_closest = equipement_bring_closest,
-                                      equipment_closest_qty = equipment_closest_qty,
-                                      closest_distance = closest_distance,
-                                      equipment_type = equipment_type,
-                                         current_path=current_path)
+                                          id_origin = id_origin, 
+                                          destination = destination, 
+                                          id_destination = id_destination,           
+                                          driving=False,
+                                          walking=True,
+                                          processing=processing, 
+                                          equipement_bring_closest = equipement_bring_closest,
+                                          equipment_closest_qty = equipment_closest_qty,
+                                          closest_distance = closest_distance,
+                                          equipment_type = equipment_type,
+                                          current_path=current_path)
     
     print('')
     print('Calcula tiempos en transporte público con Google Maps')
@@ -2458,6 +2129,7 @@ def distances_to_equipments(origin,
     cols = [id_origin, id_destination, 'hex_o', 'hex_d', 'origin', 'destination', 'origin_norm', 'destination_norm'] + cols
     return od_matrix_transit[cols]
     
+    
 def calculate_green_space(df, city_crs, population, max_distance = [1000, 2000], green_space='', osm_tags={'leisure': ['park', 'playground', 'nature_reserve', 'recreation_ground']} ):
     '''
     Calculo el área de espacio verde y el espacio verde per-cápita en un radio determinado.
@@ -2512,4 +2184,1022 @@ def calculate_green_space(df, city_crs, population, max_distance = [1000, 2000],
         
     return df
     
+
+def create_result_dir(current_path=Path()):    
+    if not Path(current_path / 'Resultados_files').is_dir(): Path.mkdir(current_path / 'tmp')
+    if not Path(current_path / 'Resultados_files').is_dir(): Path.mkdir(current_path / 'Resultados_files')
+    if not Path(current_path / 'Resultados_pptx').is_dir(): Path.mkdir(current_path / 'Resultados_pptx')
+    if not Path(current_path / 'Resultados_png').is_dir(): Path.mkdir(current_path / 'Resultados_png')
+    if not Path(current_path / 'Resultados_pdf').is_dir(): Path.mkdir(current_path / 'Resultados_pdf')
     
+    
+def indicators_all_day(od_matrix_sample, current_path = Path(), city='', prs=''):
+    '''
+    Calcula indicadores para una muestra de viajes en automovil que se calcula para el día completo. Puede incluir varios días en el mismo DataFrame (ej. día de semana, sábado y domingo)
+    od_matrix_sample = DataFrame con la matriz resultado de los viajes en automovil para las distintas horas de o los días.
+    current_path = Directorio de trabajo. Por defecto Path()
+    Salida. Dataframe de indicadores. Se guardan los resultados la carpeta de Resultados
+    
+    '''
+
+
+    
+    create_result_dir(current_path)
+    
+    if 'driving_duration_in_traffic' in od_matrix_sample.columns:
+    
+        if len(od_matrix_sample[od_matrix_sample.driving_duration_in_traffic.notna()]) > 0:
+
+            weekDaysMapping = ("Lunes", 
+                               "Martes",
+                               "Miércoles", 
+                               "Jueves",
+                               "Viernes", 
+                               "Sábado",
+                               "Domingo")
+            monthsMapping = ("", 
+                             "enero", 
+                             "febrero", 
+                             "marzo", 
+                             "abril", 
+                             "mayo", 
+                             "junio", 
+                             "julio", 
+                             "agosto", 
+                             "septiembre", 
+                             "octubre", 
+                             "noviembre", 
+                             "diciembre")
+
+            od_matrix_sample['kmh'] = (od_matrix_sample['driving_distance'] / (od_matrix_sample['driving_duration_in_traffic'] / 60)).round(2)
+
+            trip_time = od_matrix_sample.groupby('trip_datetime', as_index=False).agg({'driving_duration_in_traffic':'mean', 'kmh': 'mean'})
+            trip_time['date'] = trip_time.trip_datetime.dt.date
+            trip_time['hour'] = trip_time['trip_datetime'].dt.hour.astype(str).str.zfill(2)
+
+            indicators_all = pd.DataFrame([])
+            for i in trip_time.date.unique():
+
+                trip_time_tmp = trip_time[trip_time.date == i]
+                _ = ''
+                for x in range(0, len(f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}')):
+                    _ += '-'
+
+                indicadores = pd.DataFrame([[pd.to_datetime(i).date(), 
+                                          f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}',
+                                          trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].hour,              
+                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].driving_duration_in_traffic, 2),
+                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].kmh, 2),
+                                          trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].hour,
+                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].driving_duration_in_traffic, 2),
+                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].kmh, 2),    
+                                          round(trip_time_tmp.loc[trip_time_tmp.kmh.idxmax()].kmh / trip_time_tmp.loc[trip_time_tmp.kmh.idxmin()].kmh, 2),
+                                          round(trip_time_tmp.driving_duration_in_traffic.mean(), 2),
+                                          round(trip_time_tmp.kmh.mean(), 2)
+                                          ]], 
+
+                                         columns=['Date', 
+                                                  'Detalle día',
+                                                 'Hora Punta',                      
+                                                 'Tiempo de viaje en hora punta (min)',
+                                                 'Velocidad de viaje en hora punta (kmh)',
+                                                 'Hora Valle', 
+                                                 'Tiempo de viaje en hora valle (min)',
+                                                 'Velocidad de viaje en hora valle (kmh)',
+                                                 'Índice de congestión',
+                                                 'Tiempo promedio de los viajes (min)', 
+                                                 'Velocidad promedio de los viajes (kmh)', ])
+
+                indicators_all = pd.concat([indicadores, indicators_all], ignore_index=True)
+
+            df = indicators_all.set_index('Detalle día').T.reset_index().rename(columns={'index':'Detalle día'}).copy()
+
+            fig = Figure(figsize=(13.5,13.5), dpi=160)
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
+
+            #hide the axes
+            fig.patch.set_visible(False)
+            ax.axis('off')
+            # ax.axis('tight')
+            table = ax.table(cellText=df.values, colLabels=df.columns, loc='center', colLoc='center', cellLoc='center')
+            # table.set_fontsize(18)
+            # table.scale(1,3)
+            #display table
+            fig.tight_layout()
+            fig.savefig(current_path / 'Resultados_png' / f'{city}_indicadores_dia_completo.png', dpi=300)
+            fig.savefig(current_path / 'Resultados_pdf' / f'{city}_indicadores_dia_completo.pdf', dpi=300)
+
+
+            indicadores.to_csv(current_path / 'Resultados_files' / 'indicadores_dia_completo.csv', index=False)
+
+            with sns.axes_style('darkgrid', {"axes.facecolor": "#d4dadc", 'figure.facecolor': "#d4dadc"}):
+
+                # Tiempos promedios
+                fig = Figure(figsize=(6,3), dpi=100)
+                canvas = FigureCanvas(fig)
+                ax = fig.add_subplot(111)
+
+
+                for i in trip_time.date.unique():
+                    var = f'{weekDaysMapping[i.weekday()]} {i.day}/{i.month}/{i.year}'
+                    current_day = trip_time.loc[trip_time.date==i, ['hour', 'driving_duration_in_traffic']].reset_index(drop=True).rename(columns={'driving_duration_in_traffic':var})        
+                    current_day.plot(ax=ax, legend=True, lw=.6)
+
+
+                ax.set_title(f'Tiempos promedio de viaje', fontsize=8)
+                ax.set_xlabel('Hora', fontsize=8)
+                ax.set_ylabel('Tiempo promedio\n(minutos)', fontsize=8)
+                ax.set_xticks(list(range(0, 24)))
+                ax.tick_params(labelsize=6);
+
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0, box.width * 0.87, box.height])
+                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=6)
+                fig.savefig(current_path / 'Resultados_png'  / f'{city}_tiempos_dia_completo.png', dpi=300)
+                fig.savefig(current_path / 'Resultados_pdf'  / f'{city}_tiempos_dia_completo.pdf', dpi=300)
+                if prs == '': display(fig)
+
+
+                # Velocidades promedio
+                fig = Figure(figsize=(6,3), dpi=100)
+                canvas = FigureCanvas(fig)
+                ax = fig.add_subplot(111)
+
+
+                for i in trip_time.date.unique():
+                    var = f'{weekDaysMapping[i.weekday()]} {i.day}/{i.month}/{i.year}'
+                    current_day = trip_time.loc[trip_time.date==i, ['hour', 'kmh']].reset_index(drop=True).rename(columns={'kmh':var})        
+                    current_day.plot(ax=ax, legend=True, lw=.6)
+
+                ax.set_title(f'Velocidad promedio de viaje', fontsize=8)
+                ax.set_xlabel('Hora', fontsize=8)
+                ax.set_ylabel('Velocidad promedio\n(kmh)', fontsize=8)
+                ax.set_xticks(list(range(0, 24)))
+
+                ax.tick_params(labelsize=6);
+
+                box = ax.get_position()
+                ax.set_position([box.x0, box.y0, box.width * .87, box.height])
+                ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=6)
+                fig.savefig(current_path / 'Resultados_png' / f'{city}_kmh_dia_completo.png', dpi=300)
+                fig.savefig(current_path / 'Resultados_pdf' / f'{city}_kmh_dia_completo.pdf', dpi=300)
+                if prs == '': display(fig)
+
+                if prs != '':
+                    slide = pptx_addtitle(prs=prs, slide='',  title='', left=14.5, top=0, width=9, new=True, fontsize=48)    
+                    pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_tiempos_dia_completo.png',  left=.5, top=1.5, width=11)
+                    pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_kmh_dia_completo.png'    ,  left=11.5, top=1.5, width=11)
+
+                    pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_indicadores_dia_completo.png',  left=3, top=8, width=18)
+                else:
+                    display(indicators_all.set_index('Detalle día').T)
+
+        else:
+            print('No hay datos para procesar indicadores')
+            indicators_all = pd.DataFrame([])
+    else:
+            print('No hay datos para procesar indicadores')
+            indicators_all = pd.DataFrame([])
+    
+    return indicators_all
+    
+    
+    
+
+    
+    
+def calculate_nse_in_hexagons(censo,
+                              id_censo = 'RADIO_LINK',                          
+                              population='cant_pers',
+                              vars_nse = '', 
+                              city_crs = '',
+                              current_path = Path(),
+                              city='',
+                              res=8,
+                              run_always=True):
+    
+    create_result_dir(current_path=current_path)
+    
+    if (not Path(current_path / 'Resultados_files' / f'{city}_hexs.geojson').is_file())|(run_always):
+
+
+        censo = calculate_nse(censo, 
+                              vars_nse, 
+                              population='cant_pers', 
+                              show_map=False)
+
+        hexs = suph3.create_h3(censo, 
+                         res=res, 
+                         show_map=False)
+
+        hexs = distribute_population(gdf=censo, 
+                                     id_gdf='RADIO_LINK', 
+                                     hexs=hexs, 
+                                     id_hexs='hex', 
+                                     population='cant_pers', 
+                                     pca='PCA_1', 
+                                     crs=city_crs, 
+                                     q=[5, 3],
+                                     order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
+                                                  ['Alto', 'Medio', 'Bajo']],
+                                     show_map=True)
+
+        hexs.to_file(current_path / 'Resultados_files' / f'{city}_hexs.geojson')
+        print('')
+        print('Se guardó el archivo hexs.geojson en', current_path / f'{city}_hexs.geojson')
+        print('')
+    else:
+        hexs = gpd.read_file(current_path / 'Resultados_files' / f'{city}_hexs.geojson')
+
+    return hexs
+    
+    
+def calculate_activity_density(hexs,
+                               tags = {'amenity':True},
+                               cantidad_clusters = 8,
+                               city_crs = '',
+                               current_path = Path(),
+                               city='',                              
+                               run_always=True):
+    
+    create_result_dir(current_path=current_path)
+    
+    if (not Path(current_path / 'Resultados_files' / f'{city}_activity_density.geojson').is_file())|(run_always):
+
+
+        amenities = bring_osm(hexs, tags = tags)
+        amenities = assign_weights(amenities)
+        densidad_actividad_result, scores, amenities2 = activity_density(amenities, 
+                                                                  city_crs, 
+                                                                  cantidad_clusters = cantidad_clusters,                                                               
+                                                                  show_map = True)
+
+        densidad_actividad_result.to_file(current_path / 'Resultados_files' / f'{city}_activity_density.geojson')
+        print('')
+        print('Se guardó el archivo hexs.geojson en', current_path / f'{city}_activity_density.geojson')
+        print('')
+    else:
+        densidad_actividad_result = gpd.read_file(current_path / 'Resultados_files' / f'{city}_activity_density.geojson')
+
+    return densidad_actividad_result
+    
+    
+def calculate_od_matrix_all_day(origin, 
+                                id_origin, 
+                                destination, 
+                                id_destination,                                 
+                                trip_datetime, 
+                                key, 
+                                samples_origin = 12,
+                                samples_destination = 6,
+                                transit=False,
+                                driving=True,
+                                walking=False,
+                                bicycling=False,
+                                current_path=Path(), 
+                                city = '',
+                                normalize=False,
+                                run_always=True):
+    
+    create_result_dir(current_path=current_path)
+    
+
+
+    if (not (current_path / 'tmp' / f'{city}_origin_sample.geojson').is_file())|(run_always):    
+        origin_sample = hexs.sample(samples_origin, random_state=2).copy()
+        origin_sample.to_file(current_path / 'tmp' / f'{city}_origin_sample.geojson')
+        destination_sample = densidad_actividad.sample(samples_destination, random_state=2).copy()
+        destination_sample.to_file(current_path / 'tmp' / f'{city}_destination_sample.geojson')
+    else:    
+        origin_sample =  gpd.read_file(current_path / 'tmp' / f'{city}_origin_sample.geojson')
+        destination_sample =  gpd.read_file(current_path / 'tmp' / f'{city}_destination_sample.geojson')
+
+
+    od_matrix_all_day = trips_gmaps_from_od(origin = origin_sample, 
+                                            id_origin = id_origin, 
+                                            destination = destination_sample, 
+                                            id_destination = id_destination, 
+                                            trip_datetime = trip_datetime,                 
+                                            key = key, 
+                                            transit=transit,
+                                            driving=driving,
+                                            walking=walking,
+                                            bicycling=bicycling,
+                                            full_day=True,
+                                            normalize=normalize,
+                                            only_distance_duration=True,
+                                            current_path=current_path)
+
+
+    if len(od_matrix_all_day) > 0:
+        od_matrix_all_day.to_csv(current_path / 'Resultados_files' / f'{city}_od_matrix_all_day.csv', index=False)
+        print('')
+        print('Se guardó el archivo od_matrix_all_day.geojson en', current_path / f'{city}_od_matrix_all_day.csv')
+        print('')
+    
+    if len(od_matrix_all_day) > 0:
+        indicators_all = indicators_all_day(od_matrix_all_day, current_path, city=city)
+    
+    return od_matrix_all_day
+    
+    
+def crop_imagen(filePath, reduce=1, altura_max=0, ancho_max=0, save=True, crop_left = 0, crop_top = 0, crop_right = 0, crop_bottom = 0):
+    
+    # Trim all png images with white background in a folder
+    # Usage "python PNGWhiteTrim.py ../someFolder padding"
+
+    image=Image.open(filePath)
+    image.load()
+    imageSize = image.size #tuple
+    
+    ## QUITA ESPACIOS EN BLANCO ALREDEDOR DE LA IMAGEN
+    # remove alpha channel
+    invert_im = image.convert("RGB")
+    # invert image (so that white is 0)
+    invert_im = ImageOps.invert(invert_im)
+    imageBox = invert_im.getbbox()
+    cropped=image.crop(imageBox)
+    ## FIN DE QUITA ESPACIOS EN BLANCO ALREDEDOR DE LA IMAGEN
+    
+    #REDUCE TAMAÑO
+    _size=[]
+    # calculates percentage to reduce image by maintaining proportion
+    if altura_max>0: _size.append((altura_max/(cropped.height/38)))
+    if ancho_max>0: _size.append((ancho_max/(cropped.width/38)))
+    if len(_size) > 0: reduce = min(_size)
+    
+    if reduce < 1:
+        basewidth = int(cropped.width * reduce)
+        wpercent = (basewidth/float(cropped.size[0]))
+        hsize = int((float(cropped.size[1])*float(wpercent)))
+        # cropped.resize actually does the resizing
+        cropped = cropped.resize((basewidth,hsize), Image.ANTIALIAS)
+    
+    if crop_left + crop_top + crop_right + crop_bottom > 0:
+        width, height = cropped.size 
+        crop_right = width - crop_right 
+        crop_bottom = height - crop_bottom            
+        cropped=cropped.crop((crop_left, crop_top, crop_right, crop_bottom))
+
+    # save the image as cropped
+    if save:
+        filePath = filePath[0: filePath.find('.')]+'_cropped'+filePath[filePath.find('.'):len(filePath)]
+        cropped.save(filePath)
+        return filePath
+    else:
+        return cropped
+
+def pptx_addtitle(prs, slide='', title='', top=0, left=0, width=10, height=1, new=True, fontsize=24, fontcolor='blue', bold=True):
+
+    blank_slide_layout = prs.slide_layouts[6] # Using layout 6 (blank layout)
+    # if new create blank slide
+    if new:
+        slide = prs.slides.add_slide(blank_slide_layout)
+
+    # Set the slides background colour
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(212, 218, 220) # RGBColor(212, 218, 220) is the color of water on the contextily tiles
+
+    # translates from cm to inches
+    top = Inches(top)
+    left = Inches(left)
+    width = Inches(width)
+    height = Inches(height)
+    
+    # adds a text box onto the slide object
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.auto_size = False
+    tf.word_wrap = True
+    p = tf.add_paragraph()
+    p.text = title
+    p.font.name = 'Gill Sans'
+    p.font.color.rgb = RGBColor(64,64,64) # (105,105,105) CSS Dim Grey
+    if bold is True:
+        p.font.bold = True
+    p.font.size = Pt(fontsize)
+    p.alignment = PP_ALIGN.LEFT
+    #p.font.color = fontcolor
+    # many more parameters available
+
+    return slide
+
+def pptx_addtext(prs, slide='', text='', top= 0, left=0, width=10, height=1):
+    blank_slide_layout = prs.slide_layouts[6]
+    
+    top = Inches(top)
+    left = Inches(left)
+    width = Inches(width)
+    height = Inches(height)
+    
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    p = tf.add_paragraph()
+    p.title = text
+    # p.font.bold = True
+    
+    p.alignment = PP_ALIGN.RIGHT
+    
+    return slide
+
+def pptx_addpic(prs, slide, img_path,  left=0, top=0, width=0, altura_max=0, ancho_max=0, crop_left = 0, crop_top = 0, crop_right = 0, crop_bottom = 0):
+    # for adding all maps and graphs
+    # altura_max and ancho_max in cm
+    blank_slide_layout = prs.slide_layouts[6]
+
+    img_path = str(img_path)
+
+    if os.path.exists(img_path):
+        # crop_imagen crops the image
+        # NB commented out 20200514
+        img_path = crop_imagen(img_path, reduce=1, altura_max=altura_max, ancho_max=ancho_max, save=True, crop_left=crop_left, crop_top=crop_top, crop_right=crop_right, crop_bottom=crop_bottom)
+        
+        # control position
+        left = Inches(left)
+        top = Inches(top)
+        width  = Inches(width)
+        # add to the slide
+        if width!=0:
+            slide_return = slide.shapes.add_picture(img_path, left, top, width) 
+        else:
+            slide_return = slide.shapes.add_picture(img_path, left, top) 
+        
+        os.remove(img_path)
+        
+        return slide_return
+        
+        
+def print_density_nse(hexs, 
+                      population = 'cant_pers', 
+                      k = 4, 
+                      nse = 'NSE_5', 
+                      current_path = Path(), 
+                      city = '',
+                      prs = ''):
+    
+    create_result_dir(current_path)
+    
+    hexs['density_ha'] = round(hexs[population] / (hexs['area_m2']/10000),1).round().astype(int)
+
+    bins = [0] + mapclassify.NaturalBreaks(hexs['density_ha'], k=k).bins.tolist()
+    bins_labels = [f'{int(bins[n])} - {int(bins[n+1])}' for n in range(0, len(bins)-1)]
+    hexs['density_ha_label'] = pd.cut(hexs.density_ha, bins=bins, labels=bins_labels)
+
+    # Find the centre of the reprojected zonas
+    w,s,e,n = hexs.to_crs(3857).total_bounds
+    cx = (e+w)/2 # centre point x
+    cy = (n+s)/2 # centre point y
+
+    # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
+    crop_extent =  max(abs((e-w)/2), abs((n-s)/2)) * .90 # plus 5%
+    crop_w = cx-crop_extent
+    crop_s = cy-crop_extent
+    crop_e = cx+crop_extent
+    crop_n = cy+crop_extent
+
+    fig = Figure(figsize=(13.5,13.5), dpi=40)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+
+    hexs.to_crs(3857).plot(ax=ax, column='density_ha_label', categorical = True, lw=0, alpha=.6, cmap='PuBuGn', legend=True,
+                          legend_kwds={'loc': 'best', 'frameon': True, 'edgecolor':'white', 'facecolor':None, "title":'Densidad\n(Pers/ha)', 'title_fontsize':14, 'fontsize':14})
+
+    ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=6)
+
+    # Manual plot settings
+    ax.set_xlim(crop_w,crop_e)
+    ax.set_ylim(crop_s,crop_n)
+
+    ax.set_title('Densidad Poblacional\nPers/ha', fontsize=18)
+    ax.axis('off');
+
+    fig.tight_layout()
+    fig.savefig(current_path / 'Resultados_png'  / f'{city}_density_ha.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf'  / f'{city}_density_ha.pdf', facecolor='#d4dadc', dpi=300)
+    if prs == '': display(fig) 
+        
+    hexs['NSE_X'] = hexs[nse].replace({'1 - Alto':'Alto', '2 - Medio-Alto':'Medio-Alto', '3 - Medio':'Medio',  '4 - Medio-Bajo':'Medio-Bajo', '5 - Bajo':'Bajo'})
+    hexs['NSE_X'] = pd.CategoricalIndex(hexs['NSE_X'], categories= ['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'])
+        
+    
+    fig = Figure(figsize=(13.5,13.5), dpi=40)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+
+    hexs.to_crs(3857).plot(ax=ax, column='NSE_X', categorical = True, lw=0, alpha=.6, cmap='YlOrRd', legend=True,
+                          legend_kwds={'loc': 'best', 'frameon': True, 'edgecolor':'white', 'facecolor':None, "title":'Nivel Socioeconómico', 'title_fontsize':14, 'fontsize':14})
+    ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=6)
+    
+    del hexs['NSE_X']
+    
+    # Manual plot settings
+    ax.set_xlim(crop_w,crop_e)
+    ax.set_ylim(crop_s,crop_n)
+    
+    ax.set_title('Nivel Socioeconómico', fontsize=18)
+    ax.axis('off');
+    fig.tight_layout()
+    fig.savefig(current_path / 'Resultados_png'  / f'{city}_NSE.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf'  / f'{city}_NSE.pdf', facecolor='#d4dadc', dpi=300)
+    if prs == '': display(fig) 
+        
+    if prs != '':
+        slide = pptx_addtitle(prs=prs, slide='',  title='', left=14.5, top=0, width=9, new=True, fontsize=48)    
+        pptx_addpic(prs=prs, slide=slide, img_path= current_path / 'Resultados_png'  / f'{city}_NSE.png',          left=.5, top=1.5, width=11)
+        pptx_addpic(prs=prs, slide=slide, img_path= current_path / 'Resultados_png'  / f'{city}_density_ha.png',  left=12.5, top=1.5, width=11)
+    
+    
+        
+def calculate_avg_time_distance(hexs, 
+                                od_matrix,                                 
+                                population='cant_pers'):
+    
+    indicators_vars = [i for i in od_matrix.columns if ('time' not in i)&(('transit_' in i)|('driving_' in i)|('osm_' in i)|('walking_' in i)|('bicycling_' in i))]
+
+    common_vars = ['area_m2', population, 'PCA_1', 'NSE_5', 'NSE_3', 'trip_datetime']
+
+    od_matrix_agg = od_matrix.groupby('hex')[common_vars].first().reset_index()
+
+    for var in indicators_vars:
+        val = od_matrix[od_matrix[var].notna()].hex.value_counts().value_counts(normalize=True).reset_index().rename(columns={'index':'qty'})
+        val['hex_agg'] = val.hex.cumsum()
+        for i, row in val.iterrows():
+            if row.hex_agg > .85:
+                qty_val = row.qty
+                break
+
+        val = od_matrix[od_matrix[var].notna()].hex.value_counts().reset_index().rename(columns={'index':'hex', 'hex':'qty_val'})
+        val = val[val.qty_val >= qty_val]
+        od_matrix_val = od_matrix.loc[od_matrix.hex.isin(val.hex.tolist()), ['hex', var, 'weight']].reset_index(drop=True)
+        
+        od_matrix_val = od_matrix_val.groupby('hex').apply(lambda x: np.average(x[var], weights=x['weight'])).round(2).reset_index().rename(columns={0:var})
+        od_matrix_agg = od_matrix_agg.merge(od_matrix_val, how='left', on='hex')
+
+
+    downtown = od_matrix.loc[od_matrix.weight == od_matrix.weight.max(), ['hex']+indicators_vars]
+    for i in downtown.columns:
+        if i != 'hex':
+            downtown = downtown.rename(columns = {i: i+'_downtown'})
+
+    indicators_vars = indicators_vars + downtown.columns[1:].tolist()
+
+    od_matrix_agg = od_matrix_agg.merge(downtown, how='left', on='hex')
+
+    od_matrix_agg = hexs[['hex', 'geometry']].merge(od_matrix_agg, on='hex')
+    
+    return od_matrix_agg
+
+
+def print_graphs(   od_matrix_new,
+                    od_matrix_new_w,
+                    var,                     
+                    colors_dict = '',                    
+                    k = 5,
+                    population = 'cant_pers',
+                    equipment_type = '',
+                    equipment_type_title = '',
+                    alpha=.6,
+                    current_path = Path(),
+                    city = '',
+                    prs = ''):
+    
+# if True:
+#     od_matrix_new = df.copy()
+#     od_matrix_new_w = df_w.copy()
+#     equipment_type_title = ''
+    
+
+
+    colors = {  'distance_osm_drive': 'YlGn',
+                'distance': 'YlGn',
+                'transit_distance': 'YlGn',
+                'transit_walking_distance': 'YlGn',
+                'transit_transit_distance': 'YlGn',
+                'transit_walking_distance_origin': 'YlGn',
+                'transit_distance_downtown': 'YlGnBu',
+                'transit_walking_distance_downtown': 'YlGnBu',
+                'transit_transit_distance_downtown': 'YlGnBu',
+                'transit_walking_distance_origin_downtown': 'YlGnBu',
+                'driving_distance': 'YlGn',
+                'bicycling_distance': 'YlGn',
+                'distance_osm_walk': 'YlGn',
+                'distance_osm_walk_downtown': 'YlGnBu',
+                'walking_distance': 'YlGn',
+                'distance_osm_drive_downtown': 'YlGnBu',
+                'driving_distance_downtown': 'YlGnBu',
+                'transit_duration': 'PuBuGn',
+                'duration': 'PuBuGn',
+                'transit_walking_duration': 'PuBuGn',
+                'transit_walking_duration_origin': 'PuBuGn',
+                'transit_duration_downtown': 'YlOrBr',
+                'transit_walking_duration_downtown': 'YlOrBr',
+                'transit_walking_duration_origin_downtown': 'YlOrBr',
+                'driving_duration_in_traffic': 'PuBuGn',
+                'driving_duration_in_traffic_downtown': 'YlOrBr',
+                'walking_duration': 'PuBuGn',
+                'bicycling_duration': 'PuBuGn',
+                'transit_transit_steps': 'YlOrRd',
+                'transit_transit_steps_downtown': 'YlOrRd' ,
+                'transit_transit_steps_downtown': 'Greens' }
+    
+    try:
+        cmap = colors_dict[var]
+    except:
+        try:
+            cmap = colors[var]
+        except:
+            cmap = 'YlGn'
+    
+    desc = ''
+    label = ''
+    if 'distance' in var: desc += 'Distancias'
+    if 'duration' in var: desc += 'Tiempos'
+    if 'steps' in var: desc += 'Etapas'
+    if 'transit' in var: desc += ' en transporte público'
+    if 'driving' in var: desc += ' en automóvil'
+    if 'walking' in var: desc += ' caminando'
+    if 'bicycling' in var: desc += ' en bicicleta'
+    if 'transit_walking_distance' in var: desc = 'Distancias a la parada'
+    if 'transit_walking_distance_origin' in var: desc = 'Distancias a la parada en origen'
+    if 'transit_walking_duration' in var: desc = 'Tiempos caminando a la parada'
+    if 'green_area_ha_in2000m' in var: desc = 'Hectáreas de áreas verdes per capita en 2000m'
+
+    if 'downtown' in var: desc += '\n(viajes al centro)'
+
+    if 'distance' in var: label = 'kms'
+    if 'duration' in var: label = 'minutos'
+    if 'steps' in var: label = 'steps'
+    if 'walking_distance' in var: label = 'mts'
+    if 'green_area_ha_in' in var: label = 'mts'
+
+    if 'distance' in var: label_short = 'Distancia (kms)'
+    if 'duration' in var: label_short = 'Tiempos de viaje (minutos)'
+    if 'steps' in var: label_short = 'Modos utilizados'
+    if 'walking_distance' in var: label_short = 'Distancia (mts)'
+    if 'green_area_ha_in' in var: label_short = 'Áreas Verdes (ha)'
+
+    if 'Distancias' in desc:
+        legtitle = 'Distancias (kms)'
+    if 'Tiempos' in desc:
+        legtitle = 'Tiempos (min)'
+    if 'Etapas' in desc:
+        legtitle = 'Etapas'
+    if 'áreas verdes' in desc:
+        legtitle = 'Áreas Verdes (ha)'
+
+    od_matrix_new = od_matrix_new[od_matrix_new[var].notna()].copy()
+    od_matrix_new_w = od_matrix_new_w[od_matrix_new_w[var].notna()].copy()
+        
+    if equipment_type_title != 'x':        
+        if var == 'distance':
+            legtitle = 'Distancias (mts)'
+            od_matrix_new['distance'] = od_matrix_new['distance'] * 1000
+            od_matrix_new_w['distance'] = od_matrix_new_w['distance'] * 1000
+            desc = desc+' '+equipment_type_title    
+        if var == 'duration':
+            desc = 'Tiempos de viaje - ' + equipment_type_title + '\nTransporte público o caminando'
+                
+            
+        
+
+    if 'walking_distance' in var:
+        od_matrix_new[var] = od_matrix_new[var] * 1000
+        od_matrix_new_w[var] = od_matrix_new_w[var] * 1000
+
+    create_result_dir(current_path)    
+    
+    ### Imprimo Mapa
+
+    # Find the centre of the reprojected zonas
+    w,s,e,n = od_matrix_new.to_crs(3857).total_bounds
+    cx = (e+w)/2 # centre point x
+    cy = (n+s)/2 # centre point y
+
+    # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
+    crop_extent =  max(abs((e-w)/2), abs((n-s)/2)) * 1.05 # plus 5%
+    crop_w = cx-crop_extent
+    crop_s = cy-crop_extent
+    crop_e = cx+crop_extent
+    crop_n = cy+crop_extent
+    
+    fig = Figure(figsize=(13.5,13.5), dpi=35)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+    
+    plt.rcParams.update({"axes.facecolor": '#d4dadc', 'figure.facecolor': '#d4dadc'})   
+
+    od_matrix_new.to_crs(3857).plot(ax=ax, 
+                                    column=var, 
+                                    alpha=alpha, 
+                                    lw=0, 
+                                    categorical = True, 
+                                    legend=False, 
+                                    cmap = cmap, 
+                                    scheme='Quantiles', 
+                                    k=k)
+
+    ax.set_title(desc, fontsize=18, weight='bold')
+    ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution_size=3)
+
+    # Manual plot settings
+    ax.set_xlim(crop_w,crop_e)
+    ax.set_ylim(crop_s,crop_n)
+
+    ctx.add_attribution(ax, "@ CARTO @OpenStreetMap contributors", font_size=10)
+    ax.axis('off')
+
+    if not 'steps' in var:
+        bins = mapclassify.Quantiles(od_matrix_new[var], k=k).bins.tolist()
+    else:
+        bins = mapclassify.Quantiles(od_matrix_new[var], k=3).bins.tolist()
+
+    # colorbar
+    cax_position = "top"
+    cax_size = "1.5%"
+    cax_pad = "-2%"
+    cax_aspect = 0.045 #ancho
+
+    cmap = mpl.cm.get_cmap(cmap)
+    norm = mpl.colors.BoundaryNorm(bins, cmap.N, extend='min')
+
+    # create an axes on the side of ax. 
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes(cax_position, size=cax_size, pad=cax_pad, aspect=cax_aspect)
+    mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, spacing='uniform', orientation='horizontal', label=label,format=tick.FormatStrFormatter('%.0f'), alpha=alpha)
+
+    fig.tight_layout()
+
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_map.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_map.pdf', facecolor='#d4dadc', dpi=300)
+    if prs == '': display(fig)
+
+    for x in range(0, len(od_matrix_new_w['NSE_5'].unique())):
+        od_matrix_new_w['NSE_5'] = od_matrix_new_w['NSE_5'].str.replace(f'{x+1} - ', '')
+
+    ### Imprimo boxplot
+    
+    # Create figure, canvas, axis
+    fig = Figure(figsize=(7,4.5), dpi=70)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+
+    plt.rcParams.update({"axes.facecolor": '#d4dadc', 'figure.facecolor': '#d4dadc'})   
+
+    sns.boxplot(x='NSE_5', y=var, data=od_matrix_new_w, palette='PuOr', order=['Bajo', 'Medio-Bajo', 'Medio', 'Medio-Alto', 'Alto'], ax=ax) 
+
+    ax.set_title(label=desc, fontsize=16, weight='bold')
+    ax.tick_params(labelsize=14)
+    ax.set_xlabel('Nivel socioeconómico', fontsize=14)
+    ax.set_ylabel(ylabel=label_short, fontsize=14)
+
+
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_boxplot.png', facecolor='#d4dadc', dpi=300);
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_boxplot.pdf', facecolor='#d4dadc', dpi=300);
+    if prs == '': display(fig)
+            
+    
+    ### Imprimo gráfico de porcentajes de la población
+    
+    bins_labels = []
+    lower = 0
+    for i in bins:        
+        
+        if 'steps' not in var: 
+            upper = int(round(i))            
+        else:            
+            upper = round(i, 2)
+            
+        bins_labels = bins_labels + [f'{lower} - {upper}']
+        lower = upper
+
+    od_matrix_new_w['bins_w'] = pd.cut(od_matrix_new_w[var], [0]+bins, labels = bins_labels)
+    od_matrix_new_w['NSE_w'] = od_matrix_new_w['NSE_5'].replace({'Alto': '5 - Alto', 'Medio-Alto':'4 - Medio-Alto', 'Medio':'3 - Medio', 'Medio-Bajo':'2 - Medio-Bajo', 'Bajo':'1 - Bajo'})
+    
+    # Create figure, canvas and axis
+    fig = Figure(figsize=(7,4.5), dpi=70)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+    
+    plt.rcParams.update({"axes.facecolor": '#d4dadc', 'figure.facecolor': '#d4dadc'})   
+
+    dfw = (pd.crosstab(index=od_matrix_new_w['NSE_w'],
+                        columns=od_matrix_new_w['bins_w'], 
+                        values=od_matrix_new_w[population], 
+                        aggfunc='sum', 
+                        normalize='index').fillna(0)) * 100
+    dfw.plot(kind='bar', 
+              stacked=True, 
+              cmap=cmap,
+              ax=ax)
+
+    # Manually adjust ax settings
+    ax.set_title(desc, fontsize=15, weight='bold')
+
+    ax.tick_params(labelsize=15)
+    ax.xaxis.set_tick_params(rotation=0)
+    ax.set_xlabel('Nivel Socioeconómico', fontsize=12, rotation='horizontal')
+    ax.set_ylabel('Porcentaje de la población', fontsize=12)
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+    # Put a legend to the right of the current axis
+    ax.tick_params(axis='both', which='major', labelsize=8)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=8, title=legtitle, title_fontsize=8, frameon='white')
+
+    # Save the figure, specifying the figure background colour
+    fig.subplots_adjust(right=0.75, bottom=0.4)
+    fig.tight_layout()
+
+    labels = [i.get_text() for i in ax.get_xticklabels()]
+    labels = [i[4:] for i in labels]
+    ax.set_xticklabels(labels)
+
+    # labels = [i.get_text() for i in ax.get_yticklabels()]
+    # labels_new = [f'{i}%'.format() for i in labels]
+
+#     label_format = '{:.0%}'
+# #     ticks_loc = ax.get_yticks().tolist()
+#     ticks_loc = [0, .2, .4, .6, .8, 1, 1]
+#     ax.set_yticks(ax.get_yticks().tolist())
+#     ax.set_yticklabels([label_format.format(x) for x in ticks_loc])
+
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_bar.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_bar.pdf', facecolor='#d4dadc', dpi=300)
+    if prs == '': display(fig)
+
+    if prs != '':
+        slide = pptx_addtitle(prs=prs, slide='',  title='', left=13.5, top=0, width=10, new=True, fontsize=48)
+
+        pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_{var}_map.png',  left=0, top=0, width=13)
+        pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_{var}_boxplot.png', left=14, top=1, width=9)
+        pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_{var}_bar.png', left=14.5, top=7, width=9)
+
+
+def print_time_distance(hexs, 
+                        od_matrix, 
+                        indicators_vars='', 
+                        equipment_type='',
+                        colors_dict = '',
+                        current_path=Path(), 
+                        population = 'cant_pers',
+                        k = 5,
+                        alpha=.6,
+                        city='', 
+                        prs=''):
+    
+    if len(indicators_vars) == 0: indicators_vars=od_matrix.columns
+    
+    indicators_vars = [i for i in od_matrix.columns if (i in indicators_vars)&
+                                                      (('transit_' in i)|
+                                                       ('driving_' in i)|
+                                                       ('osm_' in i)|
+                                                       ('walking_' in i)|
+                                                       ('bicycling_' in i)|
+                                                       ('distance' == i)|
+                                                       ('distance' == i)|
+                                                       ('duration' == i)|
+                                                       ('green_area_ha_in' in i))]
+    
+    
+    if len(equipment_type) == 0:
+        od_matrix['equipment_type_tmp'] = 'x'
+        equipment_type = ['equipment_type_tmp']
+
+    if type(equipment_type) == str:
+        equipment_type = [equipment_type]
+
+    for _, i in od_matrix.groupby(equipment_type).size().reset_index().iterrows():    
+        df = od_matrix[(od_matrix[equipment_type] == i[equipment_type]).all(axis=1)].copy()
+        
+        df = hexs[['hex', 'geometry']].merge(df)
+    
+        df_w = sup.reindex_df(df, weight_col = population, div=10)
+        
+        equipment_type_title = i[equipment_type].values[0]
+        for x in i[equipment_type].values[1:].tolist():
+            equipment_type_title += ' - '+x
+        
+        for var in indicators_vars:
+            
+            print_graphs(df,
+                         df_w, 
+                         var,
+                         colors_dict = colors_dict,
+                         population = population,
+                         equipment_type = equipment_type,
+                         equipment_type_title = equipment_type_title,
+                         k = k,
+                         alpha=alpha,
+                         current_path = current_path,
+                         city = city,
+                         prs = prs)
+                         
+                         
+def create_pptx(hexs, 
+                od_matrix_all_day='',
+                od_matrix='',
+                od_establecimientos='',
+                hexs_green_space = '',
+                equipment_type='',
+                current_path = Path(), 
+                city=''):
+
+    prs = Presentation()
+    prs.slide_height = Inches(13.5)
+    prs.slide_width = Inches(24)
+
+    file_pptx = current_path / 'Resultados_pptx' / f'{city}_Accesibilidad.pptx'
+
+    print('Densidad y nivel socioeconómico')
+    print_density_nse(hexs, 
+                      current_path = current_path, 
+                      city=city,
+                      prs=prs)
+
+    if len(od_matrix_all_day) > 0:
+        print('Índicadores de día completo')
+        indicators_all = indicators_all_day(od_matrix_all_day, current_path, city=city, prs=prs)
+
+    if len(od_matrix) > 0:
+        print('Isocronas de tiempos y distancias')
+        indicators_vars = ['distance_osm_walk',
+                           'transit_duration',
+                           'driving_duration_in_traffic',
+                           'transit_walking_distance', 
+                           'transit_walking_distance_origin',                    
+                           'walking_distance', 
+                           'walking_duration', 
+                           'bicycling_distance', 
+                           'bicycling_duration']
+
+        od_matrix_avg = calculate_avg_time_distance(hexs, 
+                                                    od_matrix,
+                                                    population='cant_pers')
+
+        indicators_vars = indicators_vars + ['distance_osm_walk_downtown', 
+                                             'transit_duration_downtown', 
+                                             'driving_duration_in_traffic_downtown',
+                                             'walking_duration_downtown', 
+                                             'bicycling_duration_downtown']
+
+        print_time_distance(hexs, 
+                            od_matrix_avg, 
+                            indicators_vars=indicators_vars, 
+                            current_path=current_path, 
+                            city=city, 
+                            prs=prs)
+
+    try:
+        print('')
+        prs.save(file_pptx)
+        print(file_pptx)
+        print('')
+    except:
+        print('No se pudo guardar el archivo', file_pptx)
+
+
+    if len(od_establecimientos) > 0:
+        print('Establecimientos')
+        prs = Presentation()
+        prs.slide_height = Inches(13.5)
+        prs.slide_width = Inches(24)
+        file_pptx = current_path / 'Resultados_pptx' / f'{city}_Establecimientos.pptx'
+
+
+        print_time_distance(hexs, 
+                            od_establecimientos, 
+                            indicators_vars=['distance', 'duration'],
+                            colors_dict={'distance':'Reds', 'duration':'Blues'},
+                            equipment_type = equipment_type,
+                            current_path=current_path, 
+                            city=city,
+                            prs=prs)
+    
+    if len(hexs_green_space) > 0:
+        print_time_distance(hexs, 
+                    hexs_green_space, 
+                    indicators_vars=['green_area_ha_in2000m'],
+                    colors_dict={'green_area_ha_in2000m':'Greens'},                    
+                    current_path=current_path, 
+                    city=city,
+                    prs=prs)
+
+        try:
+            print('')
+            prs.save(file_pptx)
+            print(file_pptx)
+        except:
+            print('No se pudo guardar el archivo', file_pptx)
+
+
+
+
+
+
+
+
+
+
