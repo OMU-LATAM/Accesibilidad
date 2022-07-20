@@ -67,6 +67,8 @@ Como dato de entrada principal se requiere la cartografía censal en el menor ni
 
 # Examples
 
+Calcula variable de NSE y construye cartografía de hexágonos
+
 ```python
 from pyomu import pyomu
 
@@ -81,7 +83,9 @@ hexs = pyomu.calculate_nse_in_hexagons(censo,
                                       run_always=True)
 ```
 censo es un DataFrame con la cartografía y variables censales.
-X contiene las variables que serán utilizadas para calcular el Nivel Socioeconómico
+vars_nse contiene las variables que serán utilizadas para calcular el Nivel Socioeconómico
+
+Identifica áreas de alta densidad de actividad
 
 ```python
 densidad_actividad = pyomu.calculate_activity_density(hexs,
@@ -92,6 +96,8 @@ densidad_actividad = pyomu.calculate_activity_density(hexs,
                                                        city=city,                              
                                                        run_always=True)
 ```
+
+Cálcula tiempos y distancias de viaje
 
 ```python
 key = '' # Add Google API Key
