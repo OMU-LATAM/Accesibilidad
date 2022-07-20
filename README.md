@@ -16,6 +16,8 @@ from pyomu install pyomu
 
 ## Notebook example:
 
+<https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/medellin.ipynb>
+
 <https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/caba.ipynb>
 
 <https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb>
@@ -68,30 +70,66 @@ Como dato de entrada principal se requiere la cartografía censal en el menor ni
 ```python
 from pyomu import pyomu
 
-censo = calculate_nse(censo, 
-                          X, 
-                          population='cant_pers', 
-                          show_map=False)
-    
-hexs = create_h3(censo, 
-                 res=8, 
-                 show_map=False)
-
-hexs = distribute_population(gdf=censo, 
-                             id_gdf='RADIO_LINK', 
-                             hexs=hexs, 
-                             id_hexs='hex', 
-                             population='cant_pers', 
-                             pca='PCA_1', 
-                             crs=city_crs, 
-                             q=[5, 3],
-                             order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
-                                          ['Alto', 'Medio', 'Bajo']],
-                             show_map=True)
-
+hexs = pyomu.calculate_nse_in_hexagons(censo,
+                                      id_censo = id_censo,                          
+                                      population=population,
+                                      vars_nse = vars_nse, 
+                                      city_crs = city_crs,
+                                      current_path = current_path,
+                                      city=city,
+                                      res=8, 
+                                      run_always=True)
 ```
 censo es un DataFrame con la cartografía y variables censales.
 X contiene las variables que serán utilizadas para calcular el Nivel Socioeconómico
+
+```python
+densidad_actividad = pyomu.calculate_activity_density(hexs,
+                                                       tags = {'amenity':True},
+                                                       cantidad_clusters = 8,
+                                                       city_crs = city_crs,
+                                                       current_path = current_path,
+                                                       city=city,                              
+                                                       run_always=True)
+```
+
+```python
+key = '' # Add Google API Key
+list_trip_datetime = [datetime.datetime(2022, 9, 6, 8, 0),
+                      datetime.datetime(2022, 9, 3, 8, 0),                  
+                      datetime.datetime(2022, 9, 4, 8, 0)]
+                      
+od_matrix_all_day = pyomu.calculate_od_matrix_all_day(origin = hexs, 
+                                                        id_origin = 'hex', 
+                                                        destination = densidad_actividad, 
+                                                        id_destination = 'cluster',                     
+                                                        trip_datetime = list_trip_datetime,  
+                                                        population=population,
+                                                        key = key,      
+                                                        normalize=True,
+                                                        current_path=current_path, 
+                                                        city = city,
+                                                        run_always=False)
+```
+
+```python
+
+trip_datetime = datetime.datetime(2022, 9, 6, 8, 0)
+
+od_matrix_osm = pyomu.measure_distances_osm(hexs.copy(), 'hex', densidad_actividad, 'cluster', current_path=current_path)
+
+od_matrix = pyomu.trips_gmaps_from_matrix(od_matrix = od_matrix_osm,
+                                          trip_datetime = trip_datetime,
+                                          key = key, 
+                                          transit=True,
+                                          driving=True,
+                                          walking=False,
+                                          bicycling=False,
+                                          current_path=current_path, 
+                                          normalize=False)
+
+```
+
 
 # Resultados
 
