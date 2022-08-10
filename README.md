@@ -16,11 +16,9 @@ from pyomu install pyomu
 
 ## Notebook example:
 
-<https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/medellin.ipynb>
+<https://github.com/OMU-LATAM/Accesibilidad/blob/main/notebooks/Bogota.ipynb>
 
-<https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/caba.ipynb>
 
-<https://github.com/OMU-LATAM/Accesibilidad/blob/main/Notebooks/cordoba.ipynb>
 
 
 # Antecedentes
