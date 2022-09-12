@@ -95,7 +95,8 @@ def calculate_nse_in_hexagons(censo,
                               current_path = Path(),
                               city='',
                               res=8,
-                              run_always=True):
+                              run_always=True,
+                              show_map=True):
     
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", category=DeprecationWarning) 
@@ -103,7 +104,7 @@ def calculate_nse_in_hexagons(censo,
     
     utils.create_result_dir(current_path=current_path)
     
-    if (not Path(current_path / 'Resultados_files' / f'{city}_hexs.geojson').is_file())|(run_always):
+    if (not Path(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson').is_file())|(run_always):
 
 
         censo = nse.calculate_nse(censo, 
@@ -125,18 +126,18 @@ def calculate_nse_in_hexagons(censo,
                                      q=[5, 3],
                                      order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
                                                   ['Alto', 'Medio', 'Bajo']],
-                                     show_map=True)
+                                     show_map=show_map)
 
-        hexs.to_file(current_path / 'Resultados_files' / f'{city}_hexs.geojson')
+        hexs.to_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
         print('')
-        print('Se guardó el archivo hexs.geojson en', current_path / f'{city}_hexs.geojson')
+        print(f'Se guardó el archivo {city}_hexs{res}.geojson en', current_path / f'{city}_hexs{res}.geojson')
         print('')
     else:
-        hexs = gpd.read_file(current_path / 'Resultados_files' / f'{city}_hexs.geojson')
+        hexs = gpd.read_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
         
     hexs.loc[hexs[population].isna(), population] = 0
 
-    return hexs
+    return hexs.reset_index(drop=True)
     
     
 def calculate_activity_density(hexs,

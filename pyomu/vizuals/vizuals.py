@@ -416,12 +416,12 @@ def print_density_nse(hexs,
     cx = (e+w)/2 # centre point x
     cy = (n+s)/2 # centre point y
 
-    # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
-    crop_extent =  max(abs((e-w)/2), abs((n-s)/2)) * .8 
-    crop_w = cx-crop_extent
-    crop_s = cy-crop_extent
-    crop_e = cx+crop_extent
-    crop_n = cy+crop_extent
+#     # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
+#     crop_extent =  max(abs((e-w)/2), abs((n-s)/2))  * 1.05
+#     crop_w = cx-crop_extent
+#     crop_s = cy-crop_extent
+#     crop_e = cx+crop_extent
+#     crop_n = cy+crop_extent
 
     fig = Figure(figsize=(13.5,13.5), dpi=40)
     canvas = FigureCanvas(fig)
@@ -432,9 +432,9 @@ def print_density_nse(hexs,
 
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution=None, attribution_size=10)
 
-    # Manual plot settings
-    ax.set_xlim(crop_w,crop_e)
-    ax.set_ylim(crop_s,crop_n)
+#     # Manual plot settings
+#     ax.set_xlim(crop_w,crop_e)
+#     ax.set_ylim(crop_s,crop_n)
 
     ax.set_title('Densidad Poblacional', fontsize=18)
     ax.axis('off');
@@ -460,9 +460,9 @@ def print_density_nse(hexs,
     
     del hexs['NSE_X']
     
-    # Manual plot settings
-    ax.set_xlim(crop_w,crop_e)
-    ax.set_ylim(crop_s,crop_n)
+#     # Manual plot settings
+#     ax.set_xlim(crop_w,crop_e)
+#     ax.set_ylim(crop_s,crop_n)
     
     
     ax.set_title('Nivel Socioeconómico', fontsize=18)
@@ -559,6 +559,8 @@ def print_graphs(   od_matrix_new,
                     var,                     
                     colors_dict = '',                    
                     k = 5,
+                    bins = [],
+                    extend='neither',
                     population = '',
                     equipment_type = '',
                     equipment_type_title = '',
@@ -568,6 +570,10 @@ def print_graphs(   od_matrix_new,
                     prs = '',
                     title_ppt='',
                     showfliers=False):
+    
+    '''
+    extend='neither','min'
+    '''
     warnings.filterwarnings("ignore")
 
     colors = {  'distance_osm_drive': 'YlGn',
@@ -612,6 +618,8 @@ def print_graphs(   od_matrix_new,
     
     desc = ''
     label = ''
+    label_short = ''
+    legtitle = ''
     if 'distance' in var: desc += 'Distancias'
     if 'duration' in var: desc += 'Tiempos'
     if 'steps' in var: desc += 'Etapas'
@@ -619,24 +627,25 @@ def print_graphs(   od_matrix_new,
     if 'driving' in var: desc += ' en automóvil'
     if 'walking' in var: desc += ' caminando'
     if 'bicycling' in var: desc += ' en bicicleta'
-    if 'transit_walking_distance' in var: desc = 'Distancias a la parada'
-    if 'transit_walking_distance_origin' in var: desc = 'Distancias a la parada en origen'
-    if 'transit_walking_duration' in var: desc = 'Tiempos caminando a la parada'
-    if 'green_area_ha_in2000m' in var: desc = 'Hectáreas de áreas verdes per capita en 2000m'
-
+    if 'transit_walking_distance' in var: desc = 'Distancias caminadas (viajes en transporte público)'
+    if 'transit_walking_distance_origin' in var: desc = 'Cobertura de transporte público'
+    if 'transit_walking_duration' in var: desc = 'Tiempo caminando a la parada'
+        
+    if 'green_area_m2' in var: desc = 'Áreas verdes per capita (m2) en '+var[var.find('_in')+4:] + 'mts'
+    
     if 'downtown' in var: desc += '\n(viajes al centro)'
 
     if 'distance' in var: label = 'kms'
     if 'duration' in var: label = 'minutos'
     if 'steps' in var: label = 'steps'
     if 'walking_distance' in var: label = 'mts'
-    if 'green_area_ha_in' in var: label = 'mts'
+    if 'green_area_m2' in var: label = 'm2'
 
     if 'distance' in var: label_short = 'Distancia (kms)'
     if 'duration' in var: label_short = 'Tiempos de viaje (minutos)'
     if 'steps' in var: label_short = 'Modos utilizados'
     if 'walking_distance' in var: label_short = 'Distancia (mts)'
-    if 'green_area_ha_in' in var: label_short = 'Áreas Verdes (ha)'
+    if 'green_area_m2' in var: label_short = 'Áreas Verdes per cápita (m2)'
 
     if 'Distancias' in desc:
         legtitle = 'Distancias (kms)'
@@ -646,7 +655,7 @@ def print_graphs(   od_matrix_new,
         legtitle = 'Etapas'
     if 'áreas verdes' in desc:
         legtitle = 'Áreas Verdes (ha)'
-
+     
     od_matrix_new = od_matrix_new[od_matrix_new[var].notna()].copy()
     od_matrix_new_w = od_matrix_new_w[od_matrix_new_w[var].notna()].copy()
         
@@ -658,36 +667,89 @@ def print_graphs(   od_matrix_new,
             desc = desc+' '+equipment_type_title    
         if var == 'duration':
             desc = 'Tiempos de viaje - ' + equipment_type_title + '\nTransporte público o caminando'
-                
-            
-        
-
+        if 'qty_est' in var:
+            desc = 'Establecimientos en '+var[var.find('est_')+4:]+' - ' + equipment_type_title      
+    
     if 'walking_distance' in var:
         od_matrix_new[var] = od_matrix_new[var] * 1000
         od_matrix_new_w[var] = od_matrix_new_w[var] * 1000
+        
+        
+    sfile = ''
+    for i in od_matrix_new[equipment_type]:
+        sfile += od_matrix_new[i].unique()[0]+'_'
+    sfile = sfile[:-1]
+    
+    utils.create_result_dir(current_path)  
+    
+    if len(bins)==0:
+        if 'steps' in var:
+            bins = mapclassify.Quantiles(od_matrix_new[var], k=3).bins.tolist()
+            
 
-    utils.create_result_dir(current_path)    
+        elif ('transit_duration' in var)|('driving_duration' in var):            
+
+            min = int(od_matrix_new[var].min())
+            bins=[]
+            for n in range(0, 4):                
+                min += 15        
+                bins += [min]
+            bins = bins + [int(od_matrix_new[var].max())]            
+        elif ('transit_walking_distance' in var):
+            bins = [500, 1000, 1500, 2000]
+            
+        elif ('green_area_m2' in var):
+            bins = [1, 3, 6, 9, 12]
+            
+        else:
+            bins = mapclassify.Quantiles(od_matrix_new[var], k=k).bins.tolist()            
+
+    
+
+    bins_labels = []
+    lower = int(od_matrix_new[var].min())
+    for i in bins:        
+        
+        if 'steps' not in var: 
+            upper = int(round(i))            
+        else:            
+            upper = round(i, 2)
+            
+        bins_labels = bins_labels + [f'{lower} - {upper}']
+        lower = upper
+    if bins[len(bins)-1] < int(od_matrix_new[var].max()):
+        bins = bins+[int(od_matrix_new[var].max())]
+        bins_labels = bins_labels+[f'{upper} - {int(od_matrix_new[var].max())}']
+
     
     ### Imprimo Mapa
+    
+    bins_mapa = bins.copy()
+    if extend=='neither':
+        if bins_mapa[0] > int(od_matrix_new[var].min()):
+            bins_mapa = [int(od_matrix_new[var].min())] + bins_mapa
+
+        if bins_mapa[len(bins_mapa)-1] < int(od_matrix_new[var].max()):
+            bins_mapa = bins_mapa + [int(od_matrix_new[var].max())]
 
     # Find the centre of the reprojected zonas
     w,s,e,n = od_matrix_new.to_crs(3857).total_bounds
     cx = (e+w)/2 # centre point x
     cy = (n+s)/2 # centre point y
 
-    # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
-    crop_extent =  max(abs((e-w)/2), abs((n-s)/2)) * .8
-    crop_w = cx-crop_extent
-    crop_s = cy-crop_extent
-    crop_e = cx+crop_extent
-    crop_n = cy+crop_extent
+#     # For the actual plot define a crop that is tighter to minimise unused space at the edge of the map
+#     crop_extent =  max(abs((e-w)/2), abs((n-s)/2)) * 1.05
+#     crop_w = cx-crop_extent
+#     crop_s = cy-crop_extent
+#     crop_e = cx+crop_extent
+#     crop_n = cy+crop_extent
     
     fig = Figure(figsize=(13.5,13.5), dpi=35)
     canvas = FigureCanvas(fig)
     ax = fig.add_subplot(111)
     
     plt.rcParams.update({"axes.facecolor": '#d4dadc', 'figure.facecolor': '#d4dadc'})   
-
+    
     od_matrix_new.to_crs(3857).plot(ax=ax, 
                                     column=var, 
                                     alpha=alpha, 
@@ -695,42 +757,46 @@ def print_graphs(   od_matrix_new,
                                     categorical = True, 
                                     legend=False, 
                                     cmap = cmap, 
-                                    scheme='Quantiles', 
-                                    k=k)
+                                    scheme="User_Defined", classification_kwds=dict(bins=bins_mapa)
+                                    )
 
-    ax.set_title(desc, fontsize=18, weight='bold')
+    ax.set_title(desc, fontsize=16, weight='bold')
     ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron, attribution=None, attribution_size=10)
 
-    # Manual plot settings
-    ax.set_xlim(crop_w,crop_e)
-    ax.set_ylim(crop_s,crop_n)
+#     # Manual plot settings
+#     ax.set_xlim(crop_w,crop_e)
+#     ax.set_ylim(crop_s,crop_n)
 
-    
     ax.axis('off')
 
-    if not 'steps' in var:
-        bins = mapclassify.Quantiles(od_matrix_new[var], k=k).bins.tolist()
-    else:
-        bins = mapclassify.Quantiles(od_matrix_new[var], k=3).bins.tolist()
 
     # colorbar
     cax_position = "top"
-    cax_size = "1.5%"
-    cax_pad = "-2%"
-    cax_aspect = 0.045 #ancho
+    cax_size = "1.7%" #tamaño
+    cax_pad = "-4%" #Altura
+    cax_aspect = 0.050 #ancho
 
     cmap = mpl.cm.get_cmap(cmap)
-    norm = mpl.colors.BoundaryNorm(bins, cmap.N, extend='min')
+    norm = mpl.colors.BoundaryNorm(bins_mapa, cmap.N, extend=extend)
 
     # create an axes on the side of ax. 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes(cax_position, size=cax_size, pad=cax_pad, aspect=cax_aspect)
-    mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, spacing='uniform', orientation='horizontal', label=label,format=tick.FormatStrFormatter('%.0f'), alpha=alpha)
+    mpl.colorbar.ColorbarBase(cax, 
+                              cmap=cmap, 
+                              norm=norm, 
+                              spacing='uniform', 
+                              orientation='horizontal', 
+                              extend=extend,
+                              extendfrac=.2,
+                              label=label,
+                              format=tick.FormatStrFormatter('%.0f'), 
+                              alpha=alpha)
 
     fig.tight_layout()
 
-    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_map.png', facecolor='#d4dadc', dpi=300)
-    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_map.pdf', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_{sfile}_map.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_{sfile}_map.pdf', facecolor='#d4dadc', dpi=300)
     if prs == '': display(fig)
 
     for x in range(0, len(od_matrix_new_w['NSE_5'].unique())):
@@ -747,32 +813,26 @@ def print_graphs(   od_matrix_new,
 
     sns.boxplot(x='NSE_5', y=var, data=od_matrix_new_w, palette='PuOr', order=['Bajo', 'Medio-Bajo', 'Medio', 'Medio-Alto', 'Alto'], ax=ax, showfliers=showfliers) 
 
-    ax.set_title(label=desc, fontsize=16, weight='bold')
-    ax.tick_params(labelsize=14)
-    ax.set_xlabel('Nivel socioeconómico', fontsize=14)
-    ax.set_ylabel(ylabel=label_short, fontsize=14)
+    ax.set_title(label=desc, fontsize=13, weight='bold')
+    ax.tick_params(labelsize=12)
+    ax.set_xlabel('Nivel socioeconómico', fontsize=12)
+    ax.set_ylabel(ylabel=label_short, fontsize=12)
 
+    fig.tight_layout()
 
-    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_boxplot.png', facecolor='#d4dadc', dpi=300);
-    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_boxplot.pdf', facecolor='#d4dadc', dpi=300);
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_{sfile}_boxplot.png', facecolor='#d4dadc', dpi=300);
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_{sfile}_boxplot.pdf', facecolor='#d4dadc', dpi=300);
     if prs == '': display(fig)
             
     
     ### Imprimo gráfico de porcentajes de la población
     
-    bins_labels = []
-    lower = 0
-    for i in bins:        
-        
-        if 'steps' not in var: 
-            upper = int(round(i))            
-        else:            
-            upper = round(i, 2)
-            
-        bins_labels = bins_labels + [f'{lower} - {upper}']
-        lower = upper
+
 
     od_matrix_new_w['bins_w'] = pd.cut(od_matrix_new_w[var], [0]+bins, labels = bins_labels)
+    
+    od_matrix_new_w.loc[(od_matrix_new_w['bins_w'].isna())&(od_matrix_new_w[var]<bins[0]), 'bins_w'] = bins_labels[0]
+    
     od_matrix_new_w['NSE_w'] = od_matrix_new_w['NSE_5'].replace({'Alto': '5 - Alto', 'Medio-Alto':'4 - Medio-Alto', 'Medio':'3 - Medio', 'Medio-Bajo':'2 - Medio-Bajo', 'Bajo':'1 - Bajo'})
     
     # Create figure, canvas and axis
@@ -793,12 +853,12 @@ def print_graphs(   od_matrix_new,
               ax=ax)
 
     # Manually adjust ax settings
-    ax.set_title(desc, fontsize=15, weight='bold')
+    ax.set_title(desc, fontsize=13, weight='bold')
 
-    ax.tick_params(labelsize=15)
+    ax.tick_params(labelsize=11)
     ax.xaxis.set_tick_params(rotation=0)
-    ax.set_xlabel('Nivel Socioeconómico', fontsize=12, rotation='horizontal')
-    ax.set_ylabel('Porcentaje de la población', fontsize=12)
+    ax.set_xlabel('Nivel Socioeconómico', fontsize=11, rotation='horizontal')
+    ax.set_ylabel('Porcentaje de la población', fontsize=11)
 
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
@@ -813,9 +873,11 @@ def print_graphs(   od_matrix_new,
     labels = [i.get_text() for i in ax.get_xticklabels()]
     labels = [i[4:] for i in labels]
     ax.set_xticklabels(labels)
+    
+    fig.tight_layout()
 
-    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_bar.png', facecolor='#d4dadc', dpi=300)
-    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_bar.pdf', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_png' / f'{city}_{var}_{sfile}_bar.png', facecolor='#d4dadc', dpi=300)
+    fig.savefig(current_path / 'Resultados_pdf' / f'{city}_{var}_{sfile}_bar.pdf', facecolor='#d4dadc', dpi=300)
     if prs == '': display(fig)
 
     if prs != '':
@@ -825,34 +887,37 @@ def print_graphs(   od_matrix_new,
         pptx_addpic(prs=prs, slide=slide, img_path=current_path / 'Resultados_png' / f'{city}_{var}_bar.png', left=14.5, top=7, width=9)
 
 
-def print_time_distance(hexs, 
-                        od_matrix, 
+def print_time_distance(od_matrix, 
+                        hexs='',
                         indicators_vars='', 
                         equipment_type='',
                         colors_dict = '',
                         current_path=Path(), 
                         population = '',
                         k = 5,
+                        bins=[],
+                        extend='neither',
                         alpha=.6,
                         city='', 
                         prs='',
-                        title_ppt='',
+                        title_ppt='',                        
                         showfliers=False):
     
-    if len(indicators_vars) == 0: indicators_vars=od_matrix.columns
+    if len(indicators_vars) == 0:         
+        indicators_vars=od_matrix.columns
     
-    indicators_vars = [i for i in od_matrix.columns if (i in indicators_vars)&
-                                                      (('transit_' in i)|
-                                                       ('driving_' in i)|
-                                                       ('osm_' in i)|
-                                                       ('walking_' in i)|
-                                                       ('bicycling_' in i)|
-                                                       ('distance' == i)|
-                                                       ('distance' == i)|
-                                                       ('duration' == i)|
-                                                       ('green_area_ha_in' in i))]
-    
-    
+        indicators_vars = [i for i in od_matrix.columns if (i in indicators_vars)&
+                                                          (('transit_' in i)|
+                                                           ('driving_' in i)|
+                                                           ('osm_' in i)|
+                                                           ('walking_' in i)|
+                                                           ('bicycling_' in i)|
+                                                           ('distance' == i)|
+                                                           ('distance' == i)|
+                                                           ('duration' == i)|
+                                                           ('green_area_m2' in i))]
+
+        
     if len(equipment_type) == 0:
         od_matrix['equipment_type_tmp'] = 'x'
         equipment_type = ['equipment_type_tmp']
@@ -862,7 +927,7 @@ def print_time_distance(hexs,
 
     for _, i in od_matrix.groupby(equipment_type).size().reset_index().iterrows():   
         
-        if equipment_type != ['equipment_type_tmp']:            
+        if (equipment_type != ['equipment_type_tmp'])&(len(colors_dict)==0):            
             txt = ''
             for x in i[equipment_type].values.tolist(): txt += x +' '
 
@@ -879,7 +944,8 @@ def print_time_distance(hexs,
         
         df = od_matrix[(od_matrix[equipment_type] == i[equipment_type]).all(axis=1)].copy()
         
-        df = hexs[['hex', 'geometry']].merge(df)
+        if len(hexs) > 0:
+            df = hexs[['hex', 'geometry']].merge(df)
     
         df_w = utils.reindex_df(df, weight_col = population, div=10)
         
@@ -897,6 +963,8 @@ def print_time_distance(hexs,
                          equipment_type = equipment_type,
                          equipment_type_title = equipment_type_title,
                          k = k,
+                         bins = bins,
+                         extend=extend,
                          alpha=alpha,
                          current_path = current_path,
                          city = city,
@@ -964,8 +1032,8 @@ def create_pptx(hexs,
 
         try:
             print('Isocronas de tiempos y distancias')
-            print_time_distance(hexs, 
-                                od_matrix_avg, 
+            print_time_distance(od_matrix_avg, 
+                                hexs=hexs,
                                 indicators_vars=indicators_vars, 
                                 current_path=current_path, 
                                 population=population,
@@ -981,8 +1049,8 @@ def create_pptx(hexs,
     if len(od_establecimientos) > 0:
         print('Establecimientos')
 
-        print_time_distance(hexs, 
-                            od_establecimientos, 
+        print_time_distance(od_establecimientos, 
+                            hexs=hexs,
                             population=population,
                             indicators_vars=['duration'],
                             colors_dict={'distance':'Reds', 'duration':'Blues'},
@@ -994,16 +1062,18 @@ def create_pptx(hexs,
                             showfliers=showfliers)
     
     if len(hexs_green_space) > 0:
-        print_time_distance(hexs, 
-                    hexs_green_space, 
-                    population=population,
-                    indicators_vars=['green_area_ha_in2000m'],
-                    colors_dict={'green_area_ha_in2000m':'Greens'},                    
-                    current_path=current_path, 
-                    city=city,
-                    prs=prs,
-                    title_ppt=title_ppt,
-                    showfliers=showfliers)
+        
+        green_area_var = [_ for _ in hexs_green_space.columns if 'green_area_m2' in _]
+        green_area_var = green_area_var[0]
+        print_time_distance(hexs_green_space, 
+                            population=population,
+                            indicators_vars=[green_area_var],
+                            colors_dict={green_area_var:'Greens'},                    
+                            current_path=current_path, 
+                            city=city,
+                            prs=prs,
+                            title_ppt=title_ppt,
+                            showfliers=showfliers)
 
 
     try:

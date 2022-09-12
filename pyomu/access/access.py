@@ -80,6 +80,7 @@ from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from pyomu.utils import utils
+from pyomu import pyomu
 
 def create_matrix(origin,                   
                   destination, 
@@ -197,6 +198,123 @@ def measure_distances(idmatrix, node_from, node_to, G, lenx):
     return ret
 
 
+def h3togeo(x):    
+        return str(h3.h3_to_geo(x)[0]) +', '+ str(h3.h3_to_geo(x)[1])
+    
+def h3dist(x):
+    return h3.h3_distance(x.h3_o, x.h3_d) / 10
+
+def measure_distances_osm_from_matrix(df, 
+                                      origin = '', 
+                                      destination = '',
+                                      lat_o = '',
+                                      lon_o = '',
+                                      lat_d = '',
+                                      lon_d = '',           
+                                      h3_o = '',
+                                      h3_d = '',
+                                      processing = 'pandana',
+                                      ):
+
+    cols = df.columns.tolist()
+    
+    if len(lat_o)==0: lat_o = 'lat_o'
+    if len(lon_o)==0: lon_o = 'lon_o'
+    if len(lat_d)==0: lat_d = 'lat_d'
+    if len(lon_d)==0: lon_d = 'lon_d'
+    
+    if (lon_o not in df.columns)|(lat_o not in df.columns):      
+        if (origin not in df.columns)&(len(h3_o)>0):
+            origin='origin'
+            df[origin] = df[h3_o].apply(h3togeo)    
+        df['lon_o'] = df[origin].str.split(',').apply(lambda x: x[1]).str.strip().astype(float)        
+        df['lat_o'] = df[origin].str.split(',').apply(lambda x: x[0]).str.strip().astype(float)
+    
+    if (lon_d not in df.columns)|(lat_d not in df.columns):  
+        if (destination not in df.columns)&(len(h3_d)>0):
+            destination='destination'
+            df[destination] = df[h3_d].apply(h3togeo)    
+        df['lon_d'] = df[destination].str.split(',').apply(lambda x: x[1]).str.strip().astype(float)    
+        df['lat_d'] = df[destination].str.split(',').apply(lambda x: x[0]).str.strip().astype(float)
+
+
+    ymin, xmin, ymax, xmax = min(df['lat_o'].min(), df['lat_d'].min()), \
+                             min(df['lon_o'].min(), df['lon_d'].min()), \
+                             max(df['lat_o'].max(), df['lat_d'].max()), \
+                             max(df['lon_o'].max(), df['lon_d'].max())
+    xmin -= .2
+    ymin -= .2
+    xmax += .2
+    ymax += .2
+    
+    var_distances = []
+
+    for mode in ['drive', 'walk']:
+        print('')
+        print(f'Coords OSM {mode} - Download map') 
+        print('ymin, xmin, ymax, xmax', ymin, xmin, ymax, xmax)
+
+        print('')
+
+        if processing != 'pandana':
+
+
+            G = ox.graph_from_bbox(ymax,
+                                   ymin,
+                                   xmax, 
+                                   xmin, 
+                                   network_type=mode)
+
+            G = ox.add_edge_speeds(G)
+            G = ox.add_edge_travel_times(G)
+
+            nodes_from = ox.distance.nearest_nodes(G, 
+                                                   df[lon_o].values, 
+                                                   df[lat_o].values, 
+                                                   return_dist=True)
+
+            df['node_from'] = nodes_from[0]
+
+            nodes_to = ox.distance.nearest_nodes(G, 
+                                                 df[lon_d].values, 
+                                                 df[lat_d].values, 
+                                                 return_dist=True)
+
+            df['node_to'] = nodes_to[0]
+
+            df = df.reset_index().rename(columns={'index':'idmatrix'})
+            df[f'distance_osm_{mode}'] = df.apply(lambda x : measure_distances(x['idmatrix'],
+                                                                                             x['node_from'], 
+                                                                                             x['node_to'], 
+                                                                                             G = G, 
+                                                                                             lenx = len(df)), 
+                                                       axis=1)
+        else:
+
+            network = osm_pandana.pdna_network_from_bbox(ymin, xmin, ymax,  xmax, network_type=mode)  
+
+            df['node_from'] = network.get_node_ids(df[lon_o], df[lat_o]).values
+            df['node_to'] = network.get_node_ids(df[lon_d], df[lat_d]).values
+            df[f'distance_osm_{mode}'] = network.shortest_path_lengths(df['node_to'].values, df['node_from'].values) 
+
+        var_distances += [f'distance_osm_{mode}']
+        df[f'distance_osm_{mode}'] = (df[f'distance_osm_{mode}'] / 1000).round(2)
+
+        print('')
+
+    df.loc[(df.distance_osm_drive*1.3) < df.distance_osm_walk, 'distance_osm_walk'] = df.loc[(df.distance_osm_drive*1.3) < df.distance_osm_walk, 'distance_osm_drive']
+
+    df.loc[df.distance_osm_drive>2000, 'distance_osm_drive'] = np.nan
+    df.loc[df.distance_osm_walk>2000, 'distance_osm_walk'] = np.nan
+    
+    df = df[cols+var_distances]
+    
+    if (len(h3_o)>0)&(len(h3_d)>0):
+        df['distance_h3'] = df[[h3_o, h3_d]].apply(h3dist, axis=1)
+    
+    return df
+
+
 def measure_distances_osm(origin, 
                           id_origin, 
                           destination, 
@@ -237,9 +355,7 @@ def measure_distances_osm(origin,
     
     driving = True
     walking = True
-    
-#     destination = gpd.sjoin(destination, origin[[id_origin, 'geometry']].rename(columns={id_origin:'tmp_origin'})).drop(['index_right', 'tmp_origin'], axis=1).reset_index(drop=True)    
-#     if len(destination) > 0:
+
     
     if len(city)>0:
         trips_file = current_path / 'tmp' / f'{city}_{trips_file}_osm.csv'
@@ -283,16 +399,6 @@ def measure_distances_osm(origin,
                               latlon = True, 
                               normalize = normalize, res=res)
 
-    bounds_tmp = pd.concat([origin['geometry'], destination['geometry']])
-
-    xmin, ymin, xmax, ymax = bounds_tmp.total_bounds
-
-    xmin -= .2
-    ymin -= .2
-    xmax += .2
-    ymax += .2
-
-
     trips = pd.DataFrame([])
 
     print('Archivo temporal', trips_file)
@@ -319,64 +425,12 @@ def measure_distances_osm(origin,
 
 
     if len(od_matrix) > 0:
-        var_distances = []
-
-        for mode in modes:
-            print('')
-            print(f'Coords OSM {mode} - Download map') 
-            print('ymin, xmin, ymax, xmax', ymin, xmin, ymax, xmax)
-
-            print('')
-
-            if processing != 'pandana':
-
-
-                G = ox.graph_from_bbox(ymax,
-                                       ymin,
-                                       xmax, 
-                                       xmin, 
-                                       network_type=mode)
-
-                G = ox.add_edge_speeds(G)
-                G = ox.add_edge_travel_times(G)
-
-                nodes_from = ox.distance.nearest_nodes(G, 
-                                                       od_matrix[lon_o].values, 
-                                                       od_matrix[lat_o].values, 
-                                                       return_dist=True)
-
-                od_matrix['node_from'] = nodes_from[0]
-
-                nodes_to = ox.distance.nearest_nodes(G, 
-                                                     od_matrix[lon_d].values, 
-                                                     od_matrix[lat_d].values, 
-                                                     return_dist=True)
-
-                od_matrix['node_to'] = nodes_to[0]
-
-                od_matrix = od_matrix.reset_index().rename(columns={'index':'idmatrix'})
-                od_matrix[f'distance_osm_{mode}'] = od_matrix.apply(lambda x : measure_distances(x['idmatrix'],
-                                                                                                 x['node_from'], 
-                                                                                                 x['node_to'], 
-                                                                                                 G = G, 
-                                                                                                 lenx = len(od_matrix)), 
-                                                           axis=1)
-            else:
-
-                network = osm_pandana.pdna_network_from_bbox(ymin, xmin, ymax,  xmax, network_type=mode)  
-
-                od_matrix['node_from'] = network.get_node_ids(od_matrix[lon_o], od_matrix[lat_o]).values
-                od_matrix['node_to'] = network.get_node_ids(od_matrix[lon_d], od_matrix[lat_d]).values
-                od_matrix[f'distance_osm_{mode}'] = network.shortest_path_lengths(od_matrix['node_to'].values, od_matrix['node_from'].values) 
-
-            var_distances += [f'distance_osm_{mode}']
-            od_matrix[f'distance_osm_{mode}'] = (od_matrix[f'distance_osm_{mode}'] / 1000).round(2)
-            print('')
-
-        od_matrix = od_matrix[['hex_o', 'hex_d', geo_origin, geo_destination]+var_distances]
-
-        od_matrix.loc[(od_matrix.distance_osm_drive*1.3) < od_matrix.distance_osm_walk, 'distance_osm_walk'] = od_matrix.loc[(od_matrix.distance_osm_drive*1.3) < od_matrix.distance_osm_walk, 'distance_osm_drive']
-
+        od_matrix = measure_distances_osm_from_matrix(od_matrix, 
+                                                      lat_o = lat_o, 
+                                                      lon_o = lon_o, 
+                                                      lat_d = lat_d, 
+                                                      lon_d = lon_d,
+                                                      processing = processing)
 
     od_matrix = pd.concat([trips, od_matrix], ignore_index=True)
 
@@ -421,9 +475,6 @@ def measure_distances_osm(origin,
 
 
     print('Proceso OSM finalizado')
-#     else:
-#         print('No hay destinos en el área de los origenes')
-#         od_matrix = pd.DataFrame([])
 
     return od_matrix
 
@@ -500,8 +551,9 @@ def trip_info_googlemaps(coord_origin,
                                            alternatives=alternatives, 
                                            traffic_model="best_guess")
             gmaps_ok = 1
+            break
         except:
-            time.sleep(20)            
+            time.sleep(5)            
             gmaps_ok = 0
 
     transit_trips, driving_trips, walking_trips, bicycling_trips = pd.DataFrame([]), pd.DataFrame([]), pd.DataFrame([]), pd.DataFrame([])
@@ -810,7 +862,7 @@ def trip_info_googlemaps(coord_origin,
         print('******')
         print('Hay un error con la API de Google Maps, verifique si funciona internet o hay algún problema con la key')
         print('******')
-    return transit_trips
+    return transit_trips, gmaps_ok
 
 def gmaps_matrix(od_matrix, geo_origin, geo_destination, trip_datetime, mode, gmaps):
     '''
@@ -1179,6 +1231,8 @@ def trips_gmaps_process(od_matrix,
                     print(f'Las consultas quedan guardadas en el archivo temporal')
                     print('')
                     
+                    gmaps_ok = 1
+                    
                     coord_origin = od_matrix_agg.head(1)[geo_origin].values[0]
 
                     for trip_datetime in od_matrix_agg.trip_datetime.unique():
@@ -1199,17 +1253,20 @@ def trips_gmaps_process(od_matrix,
                             n = 0                
                             for _, i in od_matrix_agg[(od_matrix_agg.trip_datetime==trip_datetime)&(od_matrix_agg[geo_origin]!=od_matrix_agg[geo_destination])].iterrows():        
                                 
-                                
+#                                 print(i[geo_origin], i[geo_destination])
 
-                                trips_new = trip_info_googlemaps(i[geo_origin], 
-                                                                 i[geo_destination], 
-                                                                 trip_datetime = pd.to_datetime(i.trip_datetime), 
-                                                                 trip_datetime_corrected = trip_datetime_corrected,
-                                                                 gmaps = gmaps, 
-                                                                 transit=transit,
-                                                                 driving=driving,
-                                                                 walking=walking,
-                                                                 bicycling=bicycling)
+                                trips_new, gmaps_ok = trip_info_googlemaps(i[geo_origin], 
+                                                                             i[geo_destination], 
+                                                                             trip_datetime = pd.to_datetime(i.trip_datetime), 
+                                                                             trip_datetime_corrected = trip_datetime_corrected,
+                                                                             gmaps = gmaps, 
+                                                                             transit=transit,
+                                                                             driving=driving,
+                                                                             walking=walking,
+                                                                             bicycling=bicycling)
+                                
+                                if gmaps_ok == 0:
+                                    break
                                 
                                 trips_new = trips_new.rename(columns={'geo_origin':geo_origin, 'geo_destination':geo_destination})
                                 
@@ -1234,6 +1291,9 @@ def trips_gmaps_process(od_matrix,
                                     trips.to_csv(trips_file_, index=False)
                             
                             trips.to_csv(trips_file_, index=False)
+                            
+                            if gmaps_ok == 0:
+                                break
 
                         else:
                         
@@ -1262,8 +1322,11 @@ def trips_gmaps_process(od_matrix,
                                                    ignore_index=True)
 
                             trips.to_csv(trips_file_, index=False)
-
-                    print('Proceso finalizado')
+                    
+                    if gmaps_ok == 1:
+                        print('Proceso finalizado')
+                    else:
+                        print('Error en la API')
                     print('')
                     print('')
                 else:
@@ -1697,13 +1760,72 @@ def distances_to_equipments(origin,
     cols = [i for i in od_matrix_transit.columns if i not in [id_origin, id_destination, 'hex_o', 'hex_d', 'origin', 'destination', 'origin_norm', 'destination_norm']]
     cols = [id_origin, id_destination, 'hex_o', 'hex_d', 'origin', 'destination', 'origin_norm', 'destination_norm'] + cols
     od_matrix_transit = od_matrix_transit[cols]
-#     else:
-#         print('No hay destinos que coincidan en el área de los orígenes')
-#         od_matrix_transit = pd.DataFrame([])
+
     return od_matrix_transit
     
     
-def calculate_green_space(df, city_crs, population, max_distance = [1000, 2000], green_space='', osm_tags={'leisure': ['park', 'playground', 'nature_reserve', 'recreation_ground']} ):
+def calc_pop(hx, 
+             ring_size=1, 
+             df='',
+             population=''):    
+    rings = h3.k_ring(hx, ring_size)    
+    res = df[df.hex.isin(rings)][population].sum().astype(int)
+    return res
+
+def calc_green_area(hx, 
+                    ring_size=1, 
+                    df=''):
+    rings = h3.k_ring(hx, ring_size)    
+    res = df[df.hex.isin(rings)]['green_area_m2_pc'].sum().round(2)
+    return res
+
+def var_spatial_lag(hx, 
+                   ring_size=1, 
+                   var='', 
+                   df=''):
+    rings = h3.k_ring(hx, ring_size) 
+    rings.remove(hx)
+    res = round(df[df.hex.isin(rings)][var].mean(), 2)
+    return res
+
+def var_spatial_kde(hx, 
+                   ring_size=2, 
+                   var='', 
+                   df='',
+                   kde_fex=.4):
+    
+    fex = 1
+    kde_val = []
+    kde_w = []
+    remove = []
+    kde_fex = 1-kde_fex
+   
+    for i in range(0, ring_size+1):
+        
+        rings = list(h3.k_ring(hx, i))  
+
+        for x in remove:
+            rings.remove(x)
+
+        kde_val += [ round(df.loc[df.hex.isin(rings), var].mean(), 2)]
+        kde_w += [fex]
+        
+        fex = fex*kde_fex
+        remove += rings
+        
+       
+        res = round(np.average(kde_val, weights=kde_w), 2)
+    return res
+
+def calculate_green_space(df, 
+                          city_crs, 
+                          population, 
+                          max_distance = [1200, 2000], 
+                          green_space='', 
+                          osm_tags={'leisure': ['park', 'playground', 'nature_reserve', 'recreation_ground']},
+                          current_path=Path(),
+                          city='',
+                          run_always=False):
     '''
     Calculo el área de espacio verde y el espacio verde per-cápita en un radio determinado.
     
@@ -1714,45 +1836,74 @@ def calculate_green_space(df, city_crs, population, max_distance = [1000, 2000],
     green_space = Capa geográfica con parques o espacios públicos. De encontrarse esta capa vacia se obtiene de OpenStreetMaps con los parámetros osm_tags={'leisure': ['park', 'playground', 'nature_reserve', 'recreation_ground']} 
     
     Salida
-    Capa geográfica con el area y area per capita de espacios verdes en los rangos seleccionados para cada hexágono.
+    Capa geográfica con el area y area per cap de espacios verdes en los rangos seleccionados para cada hexágono.
     '''
 
-    if type(max_distance) != list:
-        max_distance = [max_distance]
+    file = current_path / 'Resultados_files' / f'{city}_greens.geojson'
+    
+    if (Path(file).is_file())&(not run_always):
+        df = gpd.read_file(file)
+        print('El cálculo de espacios verdes ya existía en', file)
+        print('Si cambió algún parámetro o quiere correr el proceso de nuevo cambia run_always=True')
+    else:
 
-    # Traigo spacios verdes y públicos de OSM
-    if len(green_space)==0:       
+        if type(max_distance) != list:
+            max_distance = [max_distance]
 
-        green_space = utils.bring_osm(df, tags = osm_tags)
-        green_space = green_space[(green_space.geom_type == 'Polygon')|(green_space.geom_type == 'MultiPolygon')]
+        # Traigo spacios verdes y públicos de OSM
+        if len(green_space)==0:       
+            green_space = pyomu.utils.bring_osm(df, tags = osm_tags)
+            green_space = green_space[(green_space.geom_type == 'Polygon')|(green_space.geom_type == 'MultiPolygon')]
+
         green_space[f'green_area_m2'] = green_space.to_crs(city_crs).area.round(1)
+        green_space[f'green_area_m2'] = green_space[f'green_area_m2'].fillna(0)
         green_space = green_space[green_space[f'green_area_m2']>=5000]
 
-    green_space = gpd.overlay(df[['hex', population, 'geometry']], green_space[['osmid', f'green_area_m2', 'geometry']], how='intersection')
-    green_space['osmid_order'] = green_space.groupby(['osmid']).transform('cumcount')
-    green_space[f'green_area_m2'] = green_space.to_crs(city_crs).area.round(1)
-
-    for i in max_distance:
-
-        df_buffer = df[['hex', population, 'geometry']].copy()
-        df_buffer['geometry'] = df_buffer.to_crs(city_crs).representative_point().buffer(i).to_crs(4326)
-        shape = gpd.overlay(df_buffer[['hex', population, 'geometry']], green_space[['osmid', 'osmid_order', f'green_area_m2', 'geometry']], how='intersection')
-        shape = shape.rename(columns={f'green_area_m2':f'green_area_m2_in{i}m'})
+        green_space['aux'] = 1
+        green_space = green_space.dissolve(by='aux')
+        green_space = gpd.overlay(df[['hex', population, 'geometry']], green_space[['osmid', 'geometry']], how='intersection')
+        green_space['osmid_order'] = green_space.groupby(['osmid']).transform('cumcount')
+        green_space[f'green_area_m2'] = green_space.to_crs(city_crs).area.round(1)
         
-        green_space_pobl = shape.groupby(['osmid', 'osmid_order'], as_index=False).agg({population:'sum', f'green_area_m2_in{i}m':'max'})
+        df = df.merge(green_space[['hex', 'green_area_m2']], how='left', on='hex')
+        df[f'green_area_m2'] = df[f'green_area_m2'].fillna(0)
 
-        green_space_pobl[f'green_pcapita_m2_in_{i}m'] = round(green_space_pobl[f'green_area_m2_in{i}m'] / green_space_pobl[population], 1)
-        green_space_pobl[f'green_area_ha_in{i}m'] = (green_space_pobl[f'green_area_m2_in{i}m'] / 10000).round(1)
 
-        shape = shape[['hex', 'osmid', 'osmid_order', population, 'geometry']].merge(green_space_pobl[['osmid', 'osmid_order', f'green_area_ha_in{i}m', f'green_area_m2_in{i}m', f'green_pcapita_m2_in_{i}m']], on=['osmid', 'osmid_order'], how='left')
-        
-        shape = shape.groupby('hex', as_index=False).agg({f'green_area_ha_in{i}m':'sum',f'green_area_m2_in{i}m':'sum', f'green_pcapita_m2_in_{i}m':'sum'})
+        for max_dist in max_distance:        
 
-        df_new = df.merge(shape, on='hex', how='left')
-        df_new[f'green_pcapita_m2_in_{i}m'] = df_new[f'green_pcapita_m2_in_{i}m'].fillna(0)
-        df_new[f'green_area_m2_in{i}m'] = df_new[f'green_area_m2_in{i}m'].fillna(0).astype(int)
-        df_new[f'green_area_ha_in{i}m'] = df_new[f'green_area_ha_in{i}m'].fillna(0)
-
-        df = df.merge(df_new[['hex', f'green_area_ha_in{i}m', f'green_area_m2_in{i}m', f'green_pcapita_m2_in_{i}m']])
+            print('Calculo para distancia de', max_dist)
+            
+            ring_size = round(max_dist / (h3.edge_length(resolution=9, unit='m') * 2))
+            
+            # Calculo la población en el rango de distancia
+            df[f'pop_in_{max_dist}'] = df.hex.apply(calc_pop, 
+                                                    ring_size=ring_size,
+                                                    df=df.copy(),
+                                                    population=population)
+            
+            # calculo areas verdes per capita para cada espacio verde en el hexágono
+            df['green_area_m2_pc'] = df['green_area_m2'] / df[f'pop_in_{max_dist}']
+            
+            # Sumo los m2 de áreas verdes para cada hexágano según el rango de distancia
+            df[f'green_area_m2_pcap_in_{max_dist}'] = df.hex.apply(calc_green_area, 
+                                                                      ring_size=ring_size,
+                                                                      df=df.copy())
+            
+            # Calculo el promedio de los vecinos para suavizar
+            df[f'green_area_m2_pcap_in_{max_dist}_lag'] = df.hex.apply(var_spatial_lag, 
+                                                                          ring_size=1, 
+                                                                          var=f'green_area_m2_pcap_in_{max_dist}',
+                                                                          df=df.copy())       
+            
+            df[f'green_area_m2_pcap_in_{max_dist}_kde'] = df.hex.apply(var_spatial_kde, 
+                                                                      ring_size=1, 
+                                                                      var=f'green_area_m2_pcap_in_{max_dist}',
+                                                                      df=df.copy(),
+                                                                      kde_fex=.4)       
+            
+            
+            df = df.drop([f'pop_in_{max_dist}', 'green_area_m2_pc'], axis=1)
+            
+            df.to_file(file)
         
     return df
