@@ -79,7 +79,7 @@ def reindex_df(df, weight_col, div=0):
     """expand the dataframe to prepare for resampling
     result is 1 row per count per sample"""
     
-    df = df[(df[weight_col]!=0)&(df[weight_col].notna())].copy()
+    df = df[(df[weight_col]>0)&(df[weight_col].notna())].copy()
     
     if div > 0:
         df[weight_col] = df[weight_col] / div

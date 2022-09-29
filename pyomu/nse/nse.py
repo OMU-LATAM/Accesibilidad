@@ -268,26 +268,22 @@ def distribute_population(gdf,
     
     # Calcula el NSE ponderado por la población (puedo calcular NSE para varios q según parámetros)
 
-    df_result = df_result[df_result[pca].notna()].reset_index(drop=True)
-
     if type(q) == int: 
         q = [q]
-        
+    
     for i in q:            
-        df_result[f'NSE_{i}'] = utils.weighted_qcut(df_result[pca], df_result[population], i, labels=False)
-        df_result[f'NSE_{i}'] = df_result[f'NSE_{i}'] + 1
+        df_result.loc[df_result[pca].notna(), f'NSE_{i}'] = utils.weighted_qcut(df_result.loc[df_result[pca].notna(), pca], df_result.loc[df_result[pca].notna(), population], i, labels=False)
+        df_result.loc[df_result[pca].notna(), f'NSE_{i}'] = df_result.loc[df_result[pca].notna(), f'NSE_{i}'] + 1
     
     
     for i in range(0, len(order_nse)):            
         lst = [x+1 for x in range(0, q[i])]      
         ord = order_nse[i]        
         ord = [f'{x+1} - {ord[x]}' for x in range(0, len(ord))]        
-        df_result[f'NSE_{q[i]}'] = df_result[f'NSE_{q[i]}'].replace(lst, ord)
+        df_result.loc[df_result[pca].notna(), f'NSE_{q[i]}'] = df_result.loc[df_result[pca].notna(), f'NSE_{q[i]}'].replace(lst, ord)
     
     
     if show_map:
-        
-        
         i = q[0]
         
         fig = plt.figure(figsize=(15,15), dpi=100)

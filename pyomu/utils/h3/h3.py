@@ -132,8 +132,6 @@ def create_h3(gdf, res = 8, show_map=False):
 
     gdf_ = bring_children(gdf_, res=res)
     
-    gdf_ = gpd.sjoin(gdf_, gdf)[['hex', 'geometry']].drop_duplicates().reset_index(drop=True)
-    
     if show_map:
         fig, ax = plt.subplots(dpi=150, figsize=(6, 6))
         gdf.to_crs(3857).plot(ax=ax, alpha=.7, edgecolor='navy', color='None', lw=.1)

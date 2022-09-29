@@ -215,7 +215,6 @@ def measure_distances_osm_from_matrix(df,
                                       h3_d = '',
                                       processing = 'pandana',
                                       ):
-
     cols = df.columns.tolist()
     
     if len(lat_o)==0: lat_o = 'lat_o'
@@ -282,7 +281,8 @@ def measure_distances_osm_from_matrix(df,
 
             df['node_to'] = nodes_to[0]
 
-            df = df.reset_index().rename(columns={'index':'idmatrix'})
+            if 'idmatrix' not in df.columns:
+                df = df.reset_index(drop=True).reset_index().rename(columns={'index':'idmatrix'})
             df[f'distance_osm_{mode}'] = df.apply(lambda x : measure_distances(x['idmatrix'],
                                                                                              x['node_from'], 
                                                                                              x['node_to'], 
@@ -1883,6 +1883,8 @@ def calculate_green_space(df,
             
             # calculo areas verdes per capita para cada espacio verde en el hexágono
             df['green_area_m2_pc'] = df['green_area_m2'] / df[f'pop_in_{max_dist}']
+            
+            df.loc[df.green_area_m2_pc == np.inf, 'green_area_m2_pc'] = 0
             
             # Sumo los m2 de áreas verdes para cada hexágano según el rango de distancia
             df[f'green_area_m2_pcap_in_{max_dist}'] = df.hex.apply(calc_green_area, 
