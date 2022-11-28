@@ -62,6 +62,10 @@ Como dato de entrada principal se requiere la cartografía censal en el menor ni
 
 - calculate_green_space: cálcula m2 de espacios verdes en un rango de distancia y m2 de espacios verdes per-cápita en un rango de distancia
 
+## Autores
+
+Sebastián Anapolsky (sanapolsky@gmail.com)
+Catalina Vanoli (cvanoli@caf.com )
 
 # Examples
 
