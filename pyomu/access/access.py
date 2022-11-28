@@ -1839,6 +1839,8 @@ def calculate_green_space(df,
     Capa geográfica con el area y area per cap de espacios verdes en los rangos seleccionados para cada hexágono.
     '''
 
+    df.loc[(df[population].isna())|(df[population]<0), population] = 0
+        
     file = current_path / 'Resultados_files' / f'{city}_greens.geojson'
     
     if (Path(file).is_file())&(not run_always):
@@ -1884,7 +1886,7 @@ def calculate_green_space(df,
             # calculo areas verdes per capita para cada espacio verde en el hexágono
             df['green_area_m2_pc'] = df['green_area_m2'] / df[f'pop_in_{max_dist}']
             
-            df.loc[df.green_area_m2_pc == np.inf, 'green_area_m2_pc'] = 0
+            df.loc[(df.green_area_m2_pc == np.inf)|(df.green_area_m2_pc.isna()), 'green_area_m2_pc'] = 0
             
             # Sumo los m2 de áreas verdes para cada hexágano según el rango de distancia
             df[f'green_area_m2_pcap_in_{max_dist}'] = df.hex.apply(calc_green_area, 

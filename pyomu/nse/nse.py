@@ -336,7 +336,7 @@ def distribute_population(gdf,
         ax.axis('off');
         del df_result['NSE_X']
         
-        
+        df_result.loc[(df_result[population].isna())|(df_result[population]<0), population] = 0
     
     return df_result
 

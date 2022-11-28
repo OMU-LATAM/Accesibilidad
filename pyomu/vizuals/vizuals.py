@@ -65,7 +65,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as tick
 import IPython
 from IPython.display import set_matplotlib_formats
-
+from mycolorpy import colorlist as mcp
 
 from PIL import Image # pip install Pillow
 from PIL import ImageOps
