@@ -9,8 +9,8 @@ import seaborn as sns
 import mapclassify
 import contextily as ctx
 
-from tqdm.notebook import tqdm
-tqdm.pandas()
+# from tqdm.notebook import tqdm
+# tqdm.pandas()
 
 import time
 
@@ -487,7 +487,8 @@ def activity_density(amenities, city_crs, cantidad_clusters = 15, show_map = Fal
 
     scores = pd.DataFrame([])
 
-    for eps, samples in tqdm(list(itertools.product(eps_, samples_)), desc='Densidad de actividad'):
+#     for eps, samples in tqdm(list(itertools.product(eps_, samples_)), desc='Densidad de actividad'):
+    for eps, samples in list(itertools.product(eps_, samples_)):
 
         cluster_name = f'cluster_{eps}_{samples}'
 
