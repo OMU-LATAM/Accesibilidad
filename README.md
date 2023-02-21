@@ -5,7 +5,16 @@ This library presents a set of tools to perform urban accessibility analysis
 ## Install:
 
 ```sh
+conda create -n env_pyomu -c conda-forge python=3.8
+conda activate env_pyomu
+pip install git+https://github.com/OMU-LATAM/Accesibilidad.git
+
+o 
+
+conda create -n env_pyomu -c conda-forge python=3.8
+conda activate env_pyomu
 pip install pyomu
+
 ```
 
 ## Use:
@@ -16,7 +25,9 @@ from pyomu install pyomu
 
 ## Notebook example:
 
-<https://github.com/OMU-LATAM/Accesibilidad/blob/main/notebooks/Bogota.ipynb>
+<https://github.com/OMU-LATAM/Accesibilidad/blob/main/notebooks/medellin.ipynb>
+
+los datos para correr este ejemplo están en el directorios tests en .\tests\data
 
 
 
