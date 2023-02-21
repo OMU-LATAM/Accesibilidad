@@ -135,17 +135,17 @@ od_matrix_all_day = pyomu.calculate_od_matrix_all_day(origin = hexs,
 
 trip_datetime = datetime.datetime(2022, 9, 6, 8, 0)
 
-od_matrix_osm = pyomu.measure_distances_osm(hexs.copy(), 'hex', densidad_actividad, 'cluster', current_path=current_path)
+od_matrix_osm = pyomu.access.measure_distances_osm(hexs.copy(), 'hex', densidad_actividad, 'cluster', current_path=current_path)
 
-od_matrix = pyomu.trips_gmaps_from_matrix(od_matrix = od_matrix_osm,
-                                          trip_datetime = trip_datetime,
-                                          key = key, 
-                                          transit=True,
-                                          driving=True,
-                                          walking=False,
-                                          bicycling=False,
-                                          current_path=current_path, 
-                                          normalize=False)
+od_matrix = pyomu.access.trips_gmaps_from_matrix( od_matrix = od_matrix_osm,
+                                                  trip_datetime = trip_datetime,
+                                                  key = key, 
+                                                  transit=True,
+                                                  driving=True,
+                                                  walking=False,
+                                                  bicycling=False,
+                                                  current_path=current_path, 
+                                                  normalize=False)
 
 ```
 
