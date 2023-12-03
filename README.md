@@ -5,13 +5,13 @@ This library presents a set of tools to perform urban accessibility analysis
 ## Install:
 
 ```sh
-conda create -n env_pyomu -c conda-forge python=3.8
+conda create -n env_pyomu -c conda-forge python=3.10 rvlib
 conda activate env_pyomu
 pip install git+https://github.com/OMU-LATAM/Accesibilidad.git
 
 o 
 
-conda create -n env_pyomu -c conda-forge python=3.8
+conda create -n env_pyomu -c conda-forge python=3.10 rvlib
 conda activate env_pyomu
 pip install pyomu
 

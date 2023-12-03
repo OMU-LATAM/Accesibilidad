@@ -27,9 +27,8 @@ from sklearn.decomposition import PCA
 
 import osmnx as ox
 import networkx as nx
-import pandana
-
-from pandana.loaders import osm as osm_pandana
+# import pandana
+# from pandana.loaders import osm as osm_pandana
 
 import datetime as datetime
 from datetime import date

@@ -28,7 +28,6 @@ from sklearn.decomposition import PCA
 import osmnx as ox
 import networkx as nx
 import pandana
-
 from pandana.loaders import osm as osm_pandana
 
 import datetime as datetime
@@ -1223,9 +1222,10 @@ def trips_gmaps_process(od_matrix,
                     print('')
 
 
-                answer = input("  Ingrese si para continuar ")
-                print('')
-                if answer.lower() == 'si':
+                # answer = input("  Ingrese si para continuar ")
+                # print('')
+                # if answer.lower() == 'si':
+                if True:
                 
                     print('')
                     print(f'Las consultas quedan guardadas en el archivo temporal')
