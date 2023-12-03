@@ -141,7 +141,8 @@ def calculate_od_matrix_all_day(origin,
                                 current_path=Path(), 
                                 city = '',
                                 normalize=False,
-                                run_always=True):
+                                run_always=True,
+                                viz=True):
     
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", category=DeprecationWarning) 
@@ -185,7 +186,7 @@ def calculate_od_matrix_all_day(origin,
         print('Se guardó el archivo od_matrix_all_day.geojson en', current_path / f'{city}_od_matrix_all_day.csv')
         print('')
     
-    if len(od_matrix_all_day) > 0:
+    if (viz)&(len(od_matrix_all_day) > 0):
         indicators_all = vizuals.indicators_all_day(od_matrix_all_day, current_path, city=city)
     
     return od_matrix_all_day

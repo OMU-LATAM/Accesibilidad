@@ -373,3 +373,12 @@ src/ciudades/Ushuaia/censo_Ushuaia.geojson
 src/cache/56ee21297c4e7a180b8725d340cdf8c3f7c062fc.json
 src/cache/402209088606fe32535cd9bfdd9aa52ee70c5013.json
 src/cache/28b80590139a6af904a14b63050ce0a0e45dfbbf.json
+src/Resultados_files/indicadores_dia_completo.csv
+src/Resultados_files/Ushuaia_od_matrix_all_day.csv
+src/Resultados_pdf/Ushuaia_indicadores_dia_completo.pdf
+src/Resultados_pdf/Ushuaia_kmh_dia_completo.pdf
+src/Resultados_pdf/Ushuaia_tiempos_dia_completo.pdf
+src/Resultados_png/Ushuaia_indicadores_dia_completo.png
+src/Resultados_png/Ushuaia_kmh_dia_completo.png
+src/Resultados_png/Ushuaia_tiempos_dia_completo.png
+src/tmp/Ushuaia_trips_file_tmp_drive_matrix_norm_2023-12-20.csv

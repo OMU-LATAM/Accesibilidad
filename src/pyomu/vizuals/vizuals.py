@@ -259,37 +259,38 @@ def indicators_all_day(od_matrix_sample, current_path = Path(), city='', prs='',
             indicators_all = pd.DataFrame([])
             for i in trip_time.date.unique():
 
-                trip_time_tmp = trip_time[trip_time.date == i]
+                trip_time_tmp = trip_time[(trip_time.date == i)&(trip_time.driving_duration_in_traffic.notna())].copy()
                 _ = ''
                 for x in range(0, len(f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}')):
                     _ += '-'
 
-                indicadores = pd.DataFrame([[pd.to_datetime(i).date(), 
-                                          f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}',
-                                          trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].hour,              
-                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].driving_duration_in_traffic, 2),
-                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].kmh, 2),
-                                          trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].hour,
-                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].driving_duration_in_traffic, 2),
-                                          round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].kmh, 2),    
-                                          round(trip_time_tmp.loc[trip_time_tmp.kmh.idxmax()].kmh / trip_time_tmp.loc[trip_time_tmp.kmh.idxmin()].kmh, 2),
-                                          round(trip_time_tmp.driving_duration_in_traffic.mean(), 2),
-                                          round(trip_time_tmp.kmh.mean(), 2)
-                                          ]], 
-
-                                         columns=['Date', 
-                                                  'Detalle día',
-                                                 'Hora Punta',                      
-                                                 'Tiempo de viaje en hora punta (min)',
-                                                 'Velocidad de viaje en hora punta (kmh)',
-                                                 'Hora Valle', 
-                                                 'Tiempo de viaje en hora valle (min)',
-                                                 'Velocidad de viaje en hora valle (kmh)',
-                                                 'Índice de congestión',
-                                                 'Tiempo promedio de los viajes (min)', 
-                                                 'Velocidad promedio de los viajes (kmh)', ])
-
-                indicators_all = pd.concat([indicadores, indicators_all], ignore_index=True)
+                if len(trip_time_tmp)>0:
+                    indicadores = pd.DataFrame([[pd.to_datetime(i).date(), 
+                                              f'{weekDaysMapping[i.weekday()]} {i.day} de {monthsMapping[i.month]}',
+                                              trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].hour,              
+                                              round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].driving_duration_in_traffic, 2),
+                                              round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmax()].kmh, 2),
+                                              trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].hour,
+                                              round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].driving_duration_in_traffic, 2),
+                                              round(trip_time_tmp.loc[trip_time_tmp.driving_duration_in_traffic.idxmin()].kmh, 2),    
+                                              round(trip_time_tmp.loc[trip_time_tmp.kmh.idxmax()].kmh / trip_time_tmp.loc[trip_time_tmp.kmh.idxmin()].kmh, 2),
+                                              round(trip_time_tmp.driving_duration_in_traffic.mean(), 2),
+                                              round(trip_time_tmp.kmh.mean(), 2)
+                                              ]], 
+    
+                                             columns=['Date', 
+                                                      'Detalle día',
+                                                     'Hora Punta',                      
+                                                     'Tiempo de viaje en hora punta (min)',
+                                                     'Velocidad de viaje en hora punta (kmh)',
+                                                     'Hora Valle', 
+                                                     'Tiempo de viaje en hora valle (min)',
+                                                     'Velocidad de viaje en hora valle (kmh)',
+                                                     'Índice de congestión',
+                                                     'Tiempo promedio de los viajes (min)', 
+                                                     'Velocidad promedio de los viajes (kmh)', ])
+    
+                    indicators_all = pd.concat([indicadores, indicators_all], ignore_index=True)
 
             df = indicators_all.set_index('Detalle día').T.reset_index().rename(columns={'index':'Detalle día'}).copy()
 
