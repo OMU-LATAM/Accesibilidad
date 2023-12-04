@@ -1,6 +1,8 @@
 import pandas as pd
 from pandas._libs.lib import is_integer
 import numpy as np
+import os
+os.environ['USE_PYGEOS'] = '0'
 import geopandas as gpd
 import h3
 import matplotlib.pyplot as plt
@@ -14,7 +16,6 @@ tqdm.pandas()
 
 import time
 
-import unidecode
 import itertools
 from pathlib import Path
 
@@ -27,9 +28,8 @@ from sklearn.decomposition import PCA
 
 import osmnx as ox
 import networkx as nx
-import pandana
-
-from pandana.loaders import osm as osm_pandana
+#import pandana
+#from pandana.loaders import osm as osm_pandana
 
 import datetime as datetime
 from datetime import date
@@ -87,57 +87,7 @@ from pyomu.nse import nse
 
     
     
-def calculate_nse_in_hexagons(censo,
-                              id_censo = '',                          
-                              population='',
-                              vars_nse = '', 
-                              city_crs = '',
-                              current_path = Path(),
-                              city='',
-                              res=8,
-                              run_always=True,
-                              show_map=True):
-    
-    warnings.filterwarnings("ignore")
-    warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
-    
-    utils.create_result_dir(current_path=current_path)
-    
-    if (not Path(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson').is_file())|(run_always):
-
-
-        censo = nse.calculate_nse(censo, 
-                              vars_nse, 
-                              population=population, 
-                              show_map=False)
-
-        hexs = utils.h3.create_h3(censo, 
-                         res=res, 
-                         show_map=False)
-
-        hexs = nse.distribute_population(gdf=censo, 
-                                     id_gdf=id_censo, 
-                                     hexs=hexs, 
-                                     id_hexs='hex', 
-                                     population=population, 
-                                     pca='PCA_1', 
-                                     crs=city_crs, 
-                                     q=[5, 3],
-                                     order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
-                                                  ['Alto', 'Medio', 'Bajo']],
-                                     show_map=show_map)
-
-        hexs.to_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
-        print('')
-        print(f'Se guardó el archivo {city}_hexs{res}.geojson en', current_path / f'{city}_hexs{res}.geojson')
-        print('')
-    else:
-        hexs = gpd.read_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
-        
-    hexs.loc[hexs[population].isna(), population] = 0
-
-    return hexs.reset_index(drop=True)
     
     
 def calculate_activity_density(hexs,
@@ -190,7 +140,8 @@ def calculate_od_matrix_all_day(origin,
                                 current_path=Path(), 
                                 city = '',
                                 normalize=False,
-                                run_always=True):
+                                run_always=True,
+                                viz=True):
     
     warnings.filterwarnings("ignore")
     warnings.filterwarnings("ignore", category=DeprecationWarning) 
@@ -234,13 +185,63 @@ def calculate_od_matrix_all_day(origin,
         print('Se guardó el archivo od_matrix_all_day.geojson en', current_path / f'{city}_od_matrix_all_day.csv')
         print('')
     
-    if len(od_matrix_all_day) > 0:
+    if (viz)&(len(od_matrix_all_day) > 0):
         indicators_all = vizuals.indicators_all_day(od_matrix_all_day, current_path, city=city)
     
     return od_matrix_all_day
     
     
+def calculate_nse_in_hexagons(censo,
+                              id_censo = '',                          
+                              population='',
+                              vars_nse = '', 
+                              city_crs = '',
+                              current_path = Path(),
+                              city='',
+                              res=8,
+                              run_always=True,
+                              show_map=True):
+    
+    warnings.filterwarnings("ignore")
+    warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
+    
+    utils.create_result_dir(current_path=current_path)
+    
+    if (not Path(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson').is_file())|(run_always):
+
+
+        censo = nse.calculate_nse(censo, 
+                              vars_nse, 
+                              population=population, 
+                              show_map=False)
+
+        hexs = utils.h3.create_h3(censo, 
+                         res=res, 
+                         show_map=False)
+
+        hexs = nse.distribute_population(gdf=censo, 
+                                     id_gdf=id_censo, 
+                                     hexs=hexs, 
+                                     id_hexs='hex', 
+                                     population=population, 
+                                     pca='PCA_1', 
+                                     crs=city_crs, 
+                                     q=[5, 3],
+                                     order_nse = [['Alto', 'Medio-Alto', 'Medio', 'Medio-Bajo', 'Bajo'],
+                                                  ['Alto', 'Medio', 'Bajo']],
+                                     show_map=show_map)
+
+        hexs.to_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
+        print('')
+        print(f'Se guardó el archivo {city}_hexs{res}.geojson en', current_path / f'{city}_hexs{res}.geojson')
+        print('')
+    else:
+        hexs = gpd.read_file(current_path / 'Resultados_files' / f'{city}_hexs{res}.geojson')
+        
+    hexs.loc[hexs[population].isna(), population] = 0
+
+    return hexs.reset_index(drop=True)
 
 
 

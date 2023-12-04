@@ -127,3 +127,260 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+src/resultados/simulacion_0hs.csv
+src/resultados/simulacion_10hs.csv
+src/resultados/simulacion_11hs.csv
+src/resultados/simulacion_12hs.csv
+src/resultados/simulacion_13hs.csv
+src/resultados/simulacion_14hs.csv
+src/resultados/simulacion_15hs.csv
+src/resultados/simulacion_16hs.csv
+src/resultados/simulacion_17hs.csv
+src/resultados/simulacion_18hs.csv
+src/resultados/simulacion_19hs.csv
+src/resultados/simulacion_1hs.csv
+src/resultados/simulacion_2023-11-29 00hs.csv
+src/resultados/simulacion_2023-11-29 01hs.csv
+src/resultados/simulacion_2023-11-29 02hs.csv
+src/resultados/simulacion_2023-11-29 03hs.csv
+src/resultados/simulacion_2023-11-29 04hs.csv
+src/resultados/simulacion_2023-11-29 05hs.csv
+src/resultados/simulacion_2023-11-29 06hs.csv
+src/resultados/simulacion_2023-11-29 07hs.csv
+src/resultados/simulacion_2023-11-29 08hs.csv
+src/resultados/simulacion_2023-11-29 09hs.csv
+src/resultados/simulacion_2023-11-29 10hs.csv
+src/resultados/simulacion_2023-11-29 11hs.csv
+src/resultados/simulacion_2023-11-29 12hs.csv
+src/resultados/simulacion_2023-11-29 13hs.csv
+src/resultados/simulacion_2023-11-29 14hs.csv
+src/resultados/simulacion_2023-11-29 15hs.csv
+src/resultados/simulacion_2023-11-29 16hs.csv
+src/resultados/simulacion_2023-11-29 17hs.csv
+src/resultados/simulacion_2023-11-29 18hs.csv
+src/resultados/simulacion_2023-11-29 19hs.csv
+src/resultados/simulacion_2023-11-29 20hs.csv
+src/resultados/simulacion_2023-11-29 21hs.csv
+src/resultados/simulacion_2023-11-29 22hs.csv
+src/resultados/simulacion_2023-11-29 23hs.csv
+src/resultados/simulacion_2023-11-30 00hs.csv
+src/resultados/simulacion_2023-11-30 01hs.csv
+src/resultados/simulacion_2023-11-30 02hs.csv
+src/resultados/simulacion_2023-11-30 03hs.csv
+src/resultados/simulacion_2023-11-30 04hs.csv
+src/resultados/simulacion_2023-11-30 05hs.csv
+src/resultados/simulacion_2023-11-30 06hs.csv
+src/resultados/simulacion_2023-11-30 07hs.csv
+src/resultados/simulacion_2023-11-30 08hs.csv
+src/resultados/simulacion_2023-11-30 09hs.csv
+src/resultados/simulacion_2023-11-30 10hs.csv
+src/resultados/simulacion_2023-11-30 11hs.csv
+src/resultados/simulacion_2023-11-30 12hs.csv
+src/resultados/simulacion_2023-11-30 13hs.csv
+src/resultados/simulacion_2023-11-30 14hs.csv
+src/resultados/simulacion_2023-11-30 15hs.csv
+src/resultados/simulacion_2023-11-30 16hs.csv
+src/resultados/simulacion_2023-11-30 17hs.csv
+src/resultados/simulacion_2023-11-30 18hs.csv
+src/resultados/simulacion_2023-11-30 19hs.csv
+src/resultados/simulacion_2023-11-30 20hs.csv
+src/resultados/simulacion_2023-11-30 21hs.csv
+src/resultados/simulacion_2023-11-30 22hs.csv
+src/resultados/simulacion_2023-11-30 23hs.csv
+src/resultados/simulacion_2023-12-02 00hs.csv
+src/resultados/simulacion_2023-12-02 01hs.csv
+src/resultados/simulacion_2023-12-02 02hs.csv
+src/resultados/simulacion_2023-12-02 03hs.csv
+src/resultados/simulacion_2023-12-02 04hs.csv
+src/resultados/simulacion_2023-12-02 05hs.csv
+src/resultados/simulacion_2023-12-02 06hs.csv
+src/resultados/simulacion_2023-12-02 07hs.csv
+src/resultados/simulacion_2023-12-02 08hs.csv
+src/resultados/simulacion_2023-12-02 09hs.csv
+src/resultados/simulacion_2023-12-02 10hs.csv
+src/resultados/simulacion_2023-12-02 11hs.csv
+src/resultados/simulacion_2023-12-02 12hs.csv
+src/resultados/simulacion_2023-12-02 13hs.csv
+src/resultados/simulacion_2023-12-02 14hs.csv
+src/resultados/simulacion_2023-12-02 15hs.csv
+src/resultados/simulacion_2023-12-02 16hs.csv
+src/resultados/simulacion_2023-12-02 17hs.csv
+src/resultados/simulacion_2023-12-02 18hs.csv
+src/resultados/simulacion_2023-12-02 19hs.csv
+src/resultados/simulacion_2023-12-02 20hs.csv
+src/resultados/simulacion_2023-12-02 21hs.csv
+src/resultados/simulacion_2023-12-02 22hs.csv
+src/resultados/simulacion_2023-12-02 23hs.csv
+src/resultados/simulacion_2023-12-03 00hs.csv
+src/resultados/simulacion_2023-12-03 01hs.csv
+src/resultados/simulacion_2023-12-03 02hs.csv
+src/resultados/simulacion_2023-12-03 03hs.csv
+src/resultados/simulacion_2023-12-03 04hs.csv
+src/resultados/simulacion_2023-12-03 05hs.csv
+src/resultados/simulacion_2023-12-03 06hs.csv
+src/resultados/simulacion_2023-12-03 07hs.csv
+src/resultados/simulacion_2023-12-03 08hs.csv
+src/resultados/simulacion_2023-12-03 09hs.csv
+src/resultados/simulacion_2023-12-03 10hs.csv
+src/resultados/simulacion_2023-12-03 11hs.csv
+src/resultados/simulacion_2023-12-03 12hs.csv
+src/resultados/simulacion_2023-12-03 13hs.csv
+src/resultados/simulacion_2023-12-03 14hs.csv
+src/resultados/simulacion_2023-12-03 15hs.csv
+src/resultados/simulacion_2023-12-03 16hs.csv
+src/resultados/simulacion_2023-12-03 17hs.csv
+src/resultados/simulacion_2023-12-03 18hs.csv
+src/resultados/simulacion_2023-12-03 19hs.csv
+src/resultados/simulacion_2023-12-03 20hs.csv
+src/resultados/simulacion_2023-12-03 21hs.csv
+src/resultados/simulacion_2023-12-03 22hs.csv
+src/resultados/simulacion_2023-12-03 23hs.csv
+src/resultados/simulacion_20hs.csv
+src/resultados/simulacion_21hs.csv
+src/resultados/simulacion_22hs.csv
+src/resultados/simulacion_23hs.csv
+src/resultados/simulacion_2hs.csv
+src/resultados/simulacion_3hs.csv
+src/resultados/simulacion_4hs.csv
+src/resultados/simulacion_5hs.csv
+src/resultados/simulacion_6hs.csv
+src/resultados/simulacion_7hs.csv
+src/resultados/simulacion_8hs.csv
+src/resultados/simulacion_9hs.csv
+src/resultados/simulacion_completa_sample_ushuaia.csv
+src/resultados/simulacion_completa_ushuaia.csv
+src/resultados/simulacion_resultado_calles_2023-11-29hs.csv
+src/resultados/simulacion_resultado_calles_2023-11-30hs.csv
+src/resultados/simulacion_resultado_calles_2023-12-02hs.csv
+src/resultados/simulacion_resultado_calles_2023-12-03hs.csv
+src/resultados/simulacion_resultado_sample_2023-11-29hs.csv
+src/resultados/simulacion_resultado_sample_2023-11-30hs.csv
+src/resultados/simulacion_resultado_sample_2023-12-02hs.csv
+src/resultados/simulacion_resultado_sample_2023-12-03hs.csv
+src/resultados/simulacion_sample_2023-11-29 00hs.csv
+src/resultados/simulacion_sample_2023-11-29 01hs.csv
+src/resultados/simulacion_sample_2023-11-29 02hs.csv
+src/resultados/simulacion_sample_2023-11-29 03hs.csv
+src/resultados/simulacion_sample_2023-11-29 04hs.csv
+src/resultados/simulacion_sample_2023-11-29 05hs.csv
+src/resultados/simulacion_sample_2023-11-29 06hs.csv
+src/resultados/simulacion_sample_2023-11-29 07hs.csv
+src/resultados/simulacion_sample_2023-11-29 08hs.csv
+src/resultados/simulacion_sample_2023-11-29 09hs.csv
+src/resultados/simulacion_sample_2023-11-29 10hs.csv
+src/resultados/simulacion_sample_2023-11-29 11hs.csv
+src/resultados/simulacion_sample_2023-11-29 12hs.csv
+src/resultados/simulacion_sample_2023-11-29 13hs.csv
+src/resultados/simulacion_sample_2023-11-29 14hs.csv
+src/resultados/simulacion_sample_2023-11-29 15hs.csv
+src/resultados/simulacion_sample_2023-11-29 16hs.csv
+src/resultados/simulacion_sample_2023-11-29 17hs.csv
+src/resultados/simulacion_sample_2023-11-29 18hs.csv
+src/resultados/simulacion_sample_2023-11-29 19hs.csv
+src/resultados/simulacion_sample_2023-11-29 20hs.csv
+src/resultados/simulacion_sample_2023-11-29 21hs.csv
+src/resultados/simulacion_sample_2023-11-29 22hs.csv
+src/resultados/simulacion_sample_2023-11-29 23hs.csv
+src/resultados/simulacion_sample_2023-11-30 00hs.csv
+src/resultados/simulacion_sample_2023-11-30 01hs.csv
+src/resultados/simulacion_sample_2023-11-30 02hs.csv
+src/resultados/simulacion_sample_2023-11-30 03hs.csv
+src/resultados/simulacion_sample_2023-11-30 04hs.csv
+src/resultados/simulacion_sample_2023-11-30 05hs.csv
+src/resultados/simulacion_sample_2023-11-30 06hs.csv
+src/resultados/simulacion_sample_2023-11-30 07hs.csv
+src/resultados/simulacion_sample_2023-11-30 08hs.csv
+src/resultados/simulacion_sample_2023-11-30 09hs.csv
+src/resultados/simulacion_sample_2023-11-30 10hs.csv
+src/resultados/simulacion_sample_2023-11-30 11hs.csv
+src/resultados/simulacion_sample_2023-11-30 12hs.csv
+src/resultados/simulacion_sample_2023-11-30 13hs.csv
+src/resultados/simulacion_sample_2023-11-30 14hs.csv
+src/resultados/simulacion_sample_2023-11-30 15hs.csv
+src/resultados/simulacion_sample_2023-11-30 16hs.csv
+src/resultados/simulacion_sample_2023-11-30 17hs.csv
+src/resultados/simulacion_sample_2023-11-30 18hs.csv
+src/resultados/simulacion_sample_2023-11-30 19hs.csv
+src/resultados/simulacion_sample_2023-11-30 20hs.csv
+src/resultados/simulacion_sample_2023-11-30 21hs.csv
+src/resultados/simulacion_sample_2023-11-30 22hs.csv
+src/resultados/simulacion_sample_2023-11-30 23hs.csv
+src/resultados/simulacion_sample_2023-12-02 00hs.csv
+src/resultados/simulacion_sample_2023-12-02 01hs.csv
+src/resultados/simulacion_sample_2023-12-02 02hs.csv
+src/resultados/simulacion_sample_2023-12-02 03hs.csv
+src/resultados/simulacion_sample_2023-12-02 04hs.csv
+src/resultados/simulacion_sample_2023-12-02 05hs.csv
+src/resultados/simulacion_sample_2023-12-02 06hs.csv
+src/resultados/simulacion_sample_2023-12-02 07hs.csv
+src/resultados/simulacion_sample_2023-12-02 08hs.csv
+src/resultados/simulacion_sample_2023-12-02 09hs.csv
+src/resultados/simulacion_sample_2023-12-02 10hs.csv
+src/resultados/simulacion_sample_2023-12-02 11hs.csv
+src/resultados/simulacion_sample_2023-12-02 12hs.csv
+src/resultados/simulacion_sample_2023-12-02 13hs.csv
+src/resultados/simulacion_sample_2023-12-02 14hs.csv
+src/resultados/simulacion_sample_2023-12-02 15hs.csv
+src/resultados/simulacion_sample_2023-12-02 16hs.csv
+src/resultados/simulacion_sample_2023-12-02 17hs.csv
+src/resultados/simulacion_sample_2023-12-02 18hs.csv
+src/resultados/simulacion_sample_2023-12-02 19hs.csv
+src/resultados/simulacion_sample_2023-12-02 20hs.csv
+src/resultados/simulacion_sample_2023-12-02 21hs.csv
+src/resultados/simulacion_sample_2023-12-02 22hs.csv
+src/resultados/simulacion_sample_2023-12-02 23hs.csv
+src/resultados/simulacion_sample_2023-12-03 00hs.csv
+src/resultados/simulacion_sample_2023-12-03 01hs.csv
+src/resultados/simulacion_sample_2023-12-03 02hs.csv
+src/resultados/simulacion_sample_2023-12-03 03hs.csv
+src/resultados/simulacion_sample_2023-12-03 04hs.csv
+src/resultados/simulacion_sample_2023-12-03 05hs.csv
+src/resultados/simulacion_sample_2023-12-03 06hs.csv
+src/resultados/simulacion_sample_2023-12-03 07hs.csv
+src/resultados/simulacion_sample_2023-12-03 08hs.csv
+src/resultados/simulacion_sample_2023-12-03 09hs.csv
+src/resultados/simulacion_sample_2023-12-03 10hs.csv
+src/resultados/simulacion_sample_2023-12-03 11hs.csv
+src/resultados/simulacion_sample_2023-12-03 12hs.csv
+src/resultados/simulacion_sample_2023-12-03 13hs.csv
+src/resultados/simulacion_sample_2023-12-03 14hs.csv
+src/resultados/simulacion_sample_2023-12-03 15hs.csv
+src/resultados/simulacion_sample_2023-12-03 16hs.csv
+src/resultados/simulacion_sample_2023-12-03 17hs.csv
+src/resultados/simulacion_sample_2023-12-03 18hs.csv
+src/resultados/simulacion_sample_2023-12-03 19hs.csv
+src/resultados/simulacion_sample_2023-12-03 20hs.csv
+src/resultados/simulacion_sample_2023-12-03 21hs.csv
+src/resultados/simulacion_sample_2023-12-03 22hs.csv
+src/resultados/simulacion_sample_2023-12-03 23hs.csv
+src/Resultados_files/Ushuaia_activity_density.geojson
+src/Resultados_files/Ushuaia_hexs9.geojson
+src/tmp/save_key.csv
+src/tmp/trips_file_tmp_drive_2023-11-29.csv
+src/tmp/trips_file_tmp_drive_2023-11-30.csv
+src/tmp/trips_file_tmp_drive_2023-12-02.csv
+src/tmp/trips_file_tmp_drive_2023-12-03.csv
+src/tmp/trips_file_tmp_osm.csv
+src/tmp/trips_file_tmp_walk_2023-12-13.csv
+src/tmp/Ushuaia_destination_sample.geojson
+src/tmp/Ushuaia_origin_sample.geojson
+src/Ushuaia_simulacion.ipynb
+src/ushuaia_viz.ipynb
+src/puntos_simulacion.geojson
+src/ejes_simulacion.html
+src/distancias_centro.geojson
+src/ciudades/Ushuaia/censo_Ushuaia.geojson
+src/cache/56ee21297c4e7a180b8725d340cdf8c3f7c062fc.json
+src/cache/402209088606fe32535cd9bfdd9aa52ee70c5013.json
+src/cache/28b80590139a6af904a14b63050ce0a0e45dfbbf.json
+src/Resultados_files/indicadores_dia_completo.csv
+src/Resultados_files/Ushuaia_od_matrix_all_day.csv
+src/Resultados_pdf/Ushuaia_indicadores_dia_completo.pdf
+src/Resultados_pdf/Ushuaia_kmh_dia_completo.pdf
+src/Resultados_pdf/Ushuaia_tiempos_dia_completo.pdf
+src/Resultados_png/Ushuaia_indicadores_dia_completo.png
+src/Resultados_png/Ushuaia_kmh_dia_completo.png
+src/Resultados_png/Ushuaia_tiempos_dia_completo.png
+src/tmp/Ushuaia_trips_file_tmp_drive_matrix_norm_2023-12-20.csv
+src/Dist_centro_ushuaia.pdf
+src/Dist_centro_ushuaia.png

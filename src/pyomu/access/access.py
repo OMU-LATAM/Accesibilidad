@@ -5,7 +5,7 @@ import geopandas as gpd
 import h3
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from datetime import date
 import mapclassify
 import contextily as ctx
 
@@ -28,7 +28,6 @@ from sklearn.decomposition import PCA
 import osmnx as ox
 import networkx as nx
 import pandana
-
 from pandana.loaders import osm as osm_pandana
 
 import datetime as datetime
@@ -1090,6 +1089,12 @@ def trips_gmaps_process(od_matrix,
     
     if full_day:
         
+        if len(list_trip_datetime)==0:
+            od_matrix['trip_datetime'] = date.today()
+        else:
+            od_matrix['trip_datetime'] = list_trip_datetime[0]
+            
+        
         od_matrix_full_day = pd.DataFrame([])
         for n in range(0, 24):                    
             od_matrix['trip_datetime'] = od_matrix.trip_datetime.apply(lambda dt: dt.replace(hour=n))
@@ -1100,6 +1105,8 @@ def trips_gmaps_process(od_matrix,
         
     else:
         od_matrix_all = od_matrix.copy()
+
+    
     od_matrix_all = od_matrix_all.drop_duplicates()
     _error = False
     trips_all = pd.DataFrame([])
@@ -1223,9 +1230,10 @@ def trips_gmaps_process(od_matrix,
                     print('')
 
 
-                answer = input("  Ingrese si para continuar ")
-                print('')
-                if answer.lower() == 'si':
+                # answer = input("  Ingrese si para continuar ")
+                # print('')
+                # if answer.lower() == 'si':
+                if True:
                 
                     print('')
                     print(f'Las consultas quedan guardadas en el archivo temporal')
@@ -1434,16 +1442,22 @@ def trips_gmaps_from_od(origin,
         list_trip_datetime = [list_trip_datetime]
 
     od_matrix_all = pd.DataFrame([])
+
+
     for i in list_trip_datetime:
         od_matrix_all_['trip_datetime'] = i
         od_matrix_all = pd.concat([od_matrix_all, od_matrix_all_], ignore_index=True)
 
+   
     if full_day:
         od_matrix_all_ = od_matrix_all.copy()
         od_matrix_full_day = pd.DataFrame([])
+        od_matrix_all = pd.DataFrame([])        
+        
         for n in range(0, 24):                    
             od_matrix_all_['trip_datetime'] = od_matrix_all_.trip_datetime.apply(lambda dt: dt.replace(hour=n))
             od_matrix_all_['hour'] = n
+            
             od_matrix_all = pd.concat([od_matrix_all,
                                        od_matrix_all_], ignore_index=True)
         od_matrix_all = od_matrix_all.sort_values(['trip_datetime', 'hour'])

@@ -5,8 +5,8 @@ from pandas._libs.lib import is_integer
 import unidecode
 import osmnx as ox
 import networkx as nx
-import pandana
-from pandana.loaders import osm as osm_pandana
+# import pandana
+# from pandana.loaders import osm as osm_pandana
 
 from pathlib import Path
 
@@ -100,17 +100,23 @@ def bring_osm(gdf, tags = {'leisure':True, 'aeroway':True, 'natural':True}, list
     Salida: GeoDataFrame con objetos espaciales de Open Street Maps
     '''
     
-    warnings.filterwarnings("ignore")
-    warnings.filterwarnings("ignore", category=DeprecationWarning) 
+    # warnings.filterwarnings("ignore")
+    # warnings.filterwarnings("ignore", category=DeprecationWarning) 
     
 
     xmin,ymin,xmax,ymax = gdf.total_bounds
-    osm = ox.geometries_from_bbox(ymax,ymin,xmax, xmin, tags).reset_index()
+    # osm = ox.geometries_from_bbox(ymax,ymin,xmax, xmin, tags).reset_index()
+    osm = ox.features.features_from_bbox(ymax,ymin,xmax, xmin, tags)
 
-    for i in tags:    
+    osm['tag'] = ''
+    osm['tag_type'] = ''
+    
+    for i in tags:           
         osm.loc[osm[i].notna(), 'tag'] = i
         osm.loc[osm[i].notna(), 'tag_type'] = osm.loc[osm[i].notna(), i]
 
+    osm = osm.reset_index()
+    
     osm = osm[['osmid', 'tag', 'tag_type', 'name', 'geometry']]
     if len(list_types) > 0:
         osm = osm.loc[(osm.geometry.type.isin(list_types)), :] 

@@ -27,9 +27,8 @@ from sklearn.decomposition import PCA
 
 import osmnx as ox
 import networkx as nx
-import pandana
-
-from pandana.loaders import osm as osm_pandana
+# import pandana
+# from pandana.loaders import osm as osm_pandana
 
 import datetime as datetime
 from datetime import date
@@ -44,8 +43,8 @@ from tzwhere import tzwhere
 from pytz import timezone
 
 import warnings
-warnings.filterwarnings("ignore")
-warnings.filterwarnings("ignore", category=DeprecationWarning) 
+# warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore", category=DeprecationWarning) 
 
 
 from shapely.geometry import Point, Polygon
@@ -180,9 +179,6 @@ def calculate_nse(df, vars, population, var_result='PCA_1', scaler_type='Standar
     
     return df_result
     
-    
-
-
 def distribute_population(gdf, 
                           id_gdf, 
                           hexs, 
@@ -244,11 +240,12 @@ def distribute_population(gdf,
     shape_space_not_available['area_not_available'] = shape_space_not_available.to_crs(crs).area
 
 
-    shape = shape.merge(shape_space_not_available[[id_hexs, id_gdf, 'area_not_available']], on=[id_hexs, id_gdf], how='left').fillna(0)
+    shape = shape.merge(shape_space_not_available[[id_hexs, id_gdf, 'area_not_available']], on=[id_hexs, id_gdf], how='left')
+    shape['area_not_available'] = shape['area_not_available'].fillna(0)
 
     shape['area_interception_result'] = (shape['area_interception'] - shape['area_not_available']) 
     
-    shape['area_gdf_result'] = shape.groupby(id_gdf).area_interception_result.transform(sum)
+    shape['area_gdf_result'] = shape.groupby(id_gdf).area_interception_result.transform('sum')
 
     shape['distribute_population'] = shape['area_interception_result'] / shape['area_gdf_result']
 
@@ -271,10 +268,10 @@ def distribute_population(gdf,
     if type(q) == int: 
         q = [q]
     
-    for i in q:            
+    for i in q:                    
+        df_result[f'NSE_{i}'] = None
         df_result.loc[df_result[pca].notna(), f'NSE_{i}'] = utils.weighted_qcut(df_result.loc[df_result[pca].notna(), pca], df_result.loc[df_result[pca].notna(), population], i, labels=False)
         df_result.loc[df_result[pca].notna(), f'NSE_{i}'] = df_result.loc[df_result[pca].notna(), f'NSE_{i}'] + 1
-    
     
     for i in range(0, len(order_nse)):            
         lst = [x+1 for x in range(0, q[i])]      
@@ -339,9 +336,6 @@ def distribute_population(gdf,
         df_result.loc[(df_result[population].isna())|(df_result[population]<0), population] = 0
     
     return df_result
-
-
-
 
 def assign_weights(amenities):
     '''
